@@ -29,7 +29,6 @@ use crate::ike::SaSituation;
 use crate::ike::SecurityAssociationV1;
 use crate::ike::TransformPayload;
 
-pub mod auth;
 pub mod ike;
 pub mod ikev2;
 
