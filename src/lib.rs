@@ -78,7 +78,6 @@ pub async fn connect() -> io::Result<()> {
     let attribute1 = Attribute {
         attribute_type: U16::from(AttributeType::Encryption),
         attribute_value_or_length: U16::from(1),
-        //1.into(),
     };
     let attribute2 = Attribute {
         attribute_type: U16::from(AttributeType::HashType),
@@ -114,7 +113,6 @@ pub async fn connect() -> io::Result<()> {
     send_buffer.extend_from_slice(attribute5.as_bytes());
     send_buffer.extend_from_slice(attribute6.as_bytes());
     send_buffer.extend_from_slice(life_duration_value.as_bytes());
-    //println!("Vector is: {:?}", send_buffer);
 
     let send = socket.send(&send_buffer).await?;
 
