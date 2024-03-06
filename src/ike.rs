@@ -1,11 +1,6 @@
 use zerocopy;
 use zerocopy::network_endian::*;
 use zerocopy::AsBytes;
-use zerocopy::ByteSlice;
-use zerocopy::FromBytes;
-use zerocopy::FromZeroes;
-use zerocopy::Ref;
-use zerocopy::Unaligned;
 
 ///Ike Wrapper Struct
 /// Ikev1 Packet
