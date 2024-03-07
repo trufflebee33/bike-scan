@@ -1,3 +1,5 @@
+use std::mem::size_of;
+
 use zerocopy;
 use zerocopy::network_endian::*;
 use zerocopy::AsBytes;
@@ -11,8 +13,26 @@ pub struct IkeV1 {
     pub security_association_payload: SecurityAssociationV1,
     pub proposal_payload: ProposalPayload,
     pub transform_payload: TransformPayload,
-    pub attribute: Attribute,
+    pub encr_attribute: Attribute,
+    pub hash_attribute: Attribute,
+    pub diffie_hellman_attribute: Attribute,
+    pub authentication_method_attribute: Attribute,
+    pub life_type_attribute: Attribute,
+    pub life_duration_attribute: Attribute,
 }
+
+impl IkeV1 {
+    pub fn calculate_length(&mut self) {
+        self.transform_payload.length = U16::from(36);
+        let proposal_length: U16 = self.proposal_payload.length
+            + (self.transform_payload.length
+                * (U16::from(self.proposal_payload.number_of_transforms as u16)));
+        let security_association_length: U16 = proposal_length + (U16::from(12));
+        let ike_packet_length: U32 = U32::from(28) + U32::from(security_association_length);
+        self.header.length = ike_packet_length;
+    }
+}
+
 ///Ikev2 Packet
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(packed)]
@@ -34,6 +54,7 @@ pub struct IkeV1Header {
     pub message_id: u32,
     pub length: U32,
 }
+
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(packed)]
 pub struct IkeV2Header {
