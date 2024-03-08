@@ -41,8 +41,6 @@ pub async fn scan() -> io::Result<()> {
 
     println!("Initiator SPI für IkeV1: {:8x}", initiator_spi);
 
-    //let mut send_buffer = vec![];
-
     ///Ike Version 1 Packet
     let mut ike_v1 = IkeV1 {
         header: IkeV1Header {
@@ -81,7 +79,7 @@ pub async fn scan() -> io::Result<()> {
         },
         encr_attribute: Attribute {
             attribute_type: U16::from(Encryption),
-            attribute_value_or_length: U16::from(2),
+            attribute_value_or_length: U16::from(1),
         },
         hash_attribute: Attribute {
             attribute_type: U16::from(HashType),
@@ -106,20 +104,18 @@ pub async fn scan() -> io::Result<()> {
 
         life_duration_value: U64::from(288000),
     };
-    ///calculate length of Ike Version 1 Packet
     ike_v1.calculate_length();
     dbg!(std::mem::size_of::<IkeV1>());
-    ///send Ike Version 1 Packet
+
     //let send = socket.send(&send_buffer).await?;
     let ike_bytes = ike_v1.as_bytes();
-    let send_ike_v1 = socket.send(&ike_bytes).await;
+    let send_ike_v1 = socket.send(ike_bytes).await;
 
     println!(
         "Sende Wrapper Paket an {:?}: {:?} bytes",
         remote_addr, send_ike_v1
     );
 
-    ///Receive Answer from Ipsec-Server
     let mut buf = [0u8; 112];
     let (bytes, addr) = socket.recv_from(&mut buf).await?;
     println!("{:?} Bytes erhalten von {:?}", bytes, addr);

@@ -21,13 +21,16 @@ pub struct IkeV1 {
     pub life_duration_attribute: Attribute,
     pub life_duration_value: U64,
 }
+
 impl IkeV1 {
     pub fn calculate_length(&mut self) {
         self.transform_payload.length = U16::from(36);
         let proposal_length: U16 = (U16::from(8))
             + ((self.transform_payload.length)
                 * (U16::from(self.proposal_payload.number_of_transforms as u16)));
+        self.proposal_payload.length = proposal_length;
         let security_association_length: U16 = proposal_length + (U16::from(12));
+        self.security_association_payload.sa_length = security_association_length;
         let ike_packet_length: U32 = U32::from(28) + U32::from(security_association_length);
         self.header.length = ike_packet_length;
     }
