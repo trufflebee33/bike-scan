@@ -18,15 +18,9 @@ use crate::ike::AttributeType::Encryption;
 use crate::ike::AttributeType::HashType;
 use crate::ike::AttributeType::LifeDuration;
 use crate::ike::AttributeType::LifeType;
-use crate::ike::DhGroup;
-use crate::ike::EncryptionAlgorithmV1;
-use crate::ike::ExchangeType;
-use crate::ike::ExchangeType::IdentityProtect;
 use crate::ike::IkeV1;
 use crate::ike::IkeV1Header;
-use crate::ike::PayloadTypeV1;
 use crate::ike::PayloadTypeV1::NoNextPayload;
-use crate::ike::PayloadTypeV1::Proposal;
 use crate::ike::PayloadTypeV1::SecurityAssociation;
 use crate::ike::PayloadTypeV1::Transform;
 use crate::ike::ProposalPayload;
@@ -37,94 +31,24 @@ use crate::ike::TransformPayload;
 pub mod ike;
 pub mod ikev2;
 
-pub async fn connect() -> io::Result<()> {
+pub async fn scan() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
     let remote_addr = "192.168.122.68:500".parse::<SocketAddr>().unwrap();
     socket.connect(remote_addr).await?;
+
+    ///calculate random Initiator Security Parameter Index
     let initiator_spi: u64 = rand::thread_rng().gen();
 
     println!("Initiator SPI für IkeV1: {:8x}", initiator_spi);
-    let header_v1 = IkeV1Header {
-        initiator_spi: U64::from(initiator_spi),
-        responder_spi: 0,
-        next_payload: SecurityAssociation,
-        version: 16,
-        exchange_type: 2,
-        flag: 0,
-        message_id: 0,
-        length: U32::from(84),
-    };
-    let header_bytes = header_v1.as_bytes();
-    let sa = SecurityAssociationV1 {
-        sa_next_payload: NoNextPayload,
-        reserved: 0,
-        sa_length: U16::from(56),
-        sa_doi: U32::from(1),
-        sa_situation: U32::from(1),
-    };
-    let proposal_v1 = ProposalPayload {
-        next_payload: 0,
-        reserved: 0,
-        length: U16::from(44),
-        proposal: 1,
-        protocol_id: 1,
-        spi_size: 0,
-        number_of_transforms: 1,
-        //spi: 0,
-    };
-    let transform = TransformPayload {
-        next_payload: 0,
-        reserved: 0,
-        length: U16::from(36),
-        transform_number: 1,
-        transform_id: 1,
-        reserved2: 0,
-    };
-    let attribute1 = Attribute {
-        attribute_type: U16::from(AttributeType::Encryption),
-        attribute_value_or_length: U16::from(1),
-    };
-    let attribute2 = Attribute {
-        attribute_type: U16::from(AttributeType::HashType),
-        attribute_value_or_length: U16::from(1),
-    };
-    let attribute3 = Attribute {
-        attribute_type: U16::from(AttributeType::AuthenticationMethod),
-        attribute_value_or_length: U16::from(1),
-    };
-    let attribute4 = Attribute {
-        attribute_type: U16::from(AttributeType::DiffieHellmanGroup),
-        attribute_value_or_length: U16::from(1),
-    };
-    let attribute5 = Attribute {
-        attribute_type: U16::from(AttributeType::LifeType),
-        attribute_value_or_length: U16::from(1),
-    };
-    let attribute6 = Attribute {
-        attribute_type: U16::from(AttributeType::LifeDuration),
-        attribute_value_or_length: U16::from(4),
-    };
-    let life_duration_value: U64 = U64::from(2880);
 
-    let mut send_buffer = vec![];
-    send_buffer.extend_from_slice(header_bytes);
-    send_buffer.extend_from_slice(sa.as_bytes());
-    send_buffer.extend_from_slice(proposal_v1.as_bytes());
-    send_buffer.extend_from_slice(transform.as_bytes());
-    send_buffer.extend_from_slice(attribute1.as_bytes());
-    send_buffer.extend_from_slice(attribute2.as_bytes());
-    send_buffer.extend_from_slice(attribute3.as_bytes());
-    send_buffer.extend_from_slice(attribute4.as_bytes());
-    send_buffer.extend_from_slice(attribute5.as_bytes());
-    send_buffer.extend_from_slice(attribute6.as_bytes());
-    send_buffer.extend_from_slice(life_duration_value.as_bytes());
+    //let mut send_buffer = vec![];
 
-    ///testing wrapper struct
-    let ike_v1 = IkeV1 {
+    ///Ike Version 1 Packet
+    let mut ike_v1 = IkeV1 {
         header: IkeV1Header {
             initiator_spi: U64::from(initiator_spi),
             responder_spi: 0,
-            next_payload: PayloadTypeV1::SecurityAssociation,
+            next_payload: SecurityAssociation,
             version: 16,
             exchange_type: 2,
             flag: 0,
@@ -132,7 +56,7 @@ pub async fn connect() -> io::Result<()> {
             length: Default::default(),
         },
         security_association_payload: SecurityAssociationV1 {
-            sa_next_payload: PayloadTypeV1::NoNextPayload,
+            sa_next_payload: NoNextPayload,
             reserved: 0,
             sa_length: Default::default(),
             sa_doi: U32::from(1),
@@ -179,18 +103,23 @@ pub async fn connect() -> io::Result<()> {
             attribute_type: U16::from(LifeDuration),
             attribute_value_or_length: U16::from(4),
         },
-    };
 
-    let send = socket.send(&send_buffer).await?;
+        life_duration_value: U64::from(288000),
+    };
+    ///calculate length of Ike Version 1 Packet
+    ike_v1.calculate_length();
+    dbg!(std::mem::size_of::<IkeV1>());
+    ///send Ike Version 1 Packet
+    //let send = socket.send(&send_buffer).await?;
     let ike_bytes = ike_v1.as_bytes();
     let send_ike_v1 = socket.send(&ike_bytes).await;
 
-    //println!("Sende Paket an {:?}: {:?} bytes", remote_addr, send);
     println!(
         "Sende Wrapper Paket an {:?}: {:?} bytes",
         remote_addr, send_ike_v1
     );
 
+    ///Receive Answer from Ipsec-Server
     let mut buf = [0u8; 112];
     let (bytes, addr) = socket.recv_from(&mut buf).await?;
     println!("{:?} Bytes erhalten von {:?}", bytes, addr);

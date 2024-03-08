@@ -1,5 +1,5 @@
-use trufflescan::connect;
+use trufflescan::scan;
 #[tokio::main]
 async fn main() {
-    connect().await.unwrap();
+    scan().await.unwrap();
 }
