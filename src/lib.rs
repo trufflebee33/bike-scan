@@ -1,6 +1,7 @@
 use std::io;
 use std::net::SocketAddr;
 
+use nom::IResult;
 use rand::random;
 use rand::Rng;
 use tokio::net::UdpSocket;
@@ -9,23 +10,16 @@ use zerocopy::network_endian::U32;
 use zerocopy::network_endian::U64;
 use zerocopy::AsBytes;
 
-use crate::ike::Attribute;
-use crate::ike::AttributeType::AuthenticationMethod;
-use crate::ike::AttributeType::DiffieHellmanGroup;
-use crate::ike::AttributeType::Encryption;
-use crate::ike::AttributeType::HashType;
-use crate::ike::AttributeType::LifeDuration;
-use crate::ike::AttributeType::LifeType;
 use crate::ike::IkeV1;
 use crate::ike::IkeV1Header;
 use crate::ike::PayloadTypeV1::NoNextPayload;
 use crate::ike::PayloadTypeV1::SecurityAssociation;
 use crate::ike::ProposalPayload;
 use crate::ike::SecurityAssociationV1;
-use crate::ike::TransformPayload;
 
 pub mod ike;
 pub mod ikev2;
+pub mod parse_ike;
 
 pub async fn scan() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
@@ -63,7 +57,7 @@ pub async fn scan() -> io::Result<()> {
             proposal: 1,
             protocol_id: 1,
             spi_size: 0,
-            number_of_transforms: 1,
+            number_of_transforms: Default::default(),
         },
         transform: vec![],
     };

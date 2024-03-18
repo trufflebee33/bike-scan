@@ -18,17 +18,19 @@ pub struct IkeV1 {
 impl IkeV1 {
     pub fn build_transforms_calculate_length(&mut self) {
         self.proposal_payload.number_of_transforms = 1;
+        let mut count_transform = 1;
+        let mut payload = PayloadTypeV1::Transform;
         for auth_method in 1..=5 {
             //for diffie_group in (1..=21).chain(24..=24).chain(28..=34) {
-            for diffie_group in (1..=5) {
-                for hash in 1..=3 {
-                    for encryption in 1..=4 {
+            for diffie_group in 1..=5 {
+                for hash in 1..=7 {
+                    for encryption in 1..=8 {
                         self.transform.push(Transform {
                             transform_payload: TransformPayload {
-                                next_payload: PayloadTypeV1::Transform,
+                                next_payload: payload,
                                 reserved: 0,
-                                length: Default::default(),
-                                transform_number: 1,
+                                length: U16::from(36),
+                                transform_number: count_transform,
                                 transform_id: 1,
                                 reserved2: 0,
                             },
@@ -60,10 +62,12 @@ impl IkeV1 {
                             life_duration_value: U64::from(288000),
                         });
                         self.proposal_payload.number_of_transforms += 1;
+                        count_transform += 1;
                     }
                 }
             }
         }
+        payload = PayloadTypeV1::NoNextPayload;
         let transform_length: U16 = U16::from(self.transform.len() as u16);
         println!("Vector length {:?}", transform_length);
         let proposal_length: U16 = U16::from(8) + transform_length;
