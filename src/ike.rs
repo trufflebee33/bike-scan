@@ -6,14 +6,93 @@ use zerocopy::AsBytes;
 
 ///Ike Wrapper Struct
 /// Ikev1 Packet
-#[derive(Debug, Copy, Clone, AsBytes)]
-#[repr(packed)]
+#[derive(Debug, Clone)]
 pub struct IkeV1 {
     pub header: IkeV1Header,
     pub security_association_payload: SecurityAssociationV1,
     pub proposal_payload: ProposalPayload,
+    pub transform: Vec<Transform>,
+}
+
+///wenn letzte transformation dann next_payload auf 0 setzen! todo(wie machen?)
+impl IkeV1 {
+    pub fn build_transforms_calculate_length(&mut self) {
+        self.proposal_payload.number_of_transforms = 1;
+        for auth_method in 1..=5 {
+            //for diffie_group in (1..=21).chain(24..=24).chain(28..=34) {
+            for diffie_group in (1..=5) {
+                for hash in 1..=3 {
+                    for encryption in 1..=4 {
+                        self.transform.push(Transform {
+                            transform_payload: TransformPayload {
+                                next_payload: PayloadTypeV1::Transform,
+                                reserved: 0,
+                                length: Default::default(),
+                                transform_number: 1,
+                                transform_id: 1,
+                                reserved2: 0,
+                            },
+                            encryption_attribute: Attribute {
+                                attribute_type: U16::from(AttributeType::Encryption),
+                                attribute_value_or_length: U16::from(encryption),
+                            },
+                            hash_attribute: Attribute {
+                                attribute_type: U16::from(AttributeType::HashType),
+                                attribute_value_or_length: U16::from(hash),
+                            },
+                            diffie_hellman_attribute: Attribute {
+                                attribute_type: U16::from(AttributeType::DiffieHellmanGroup),
+                                attribute_value_or_length: U16::from(diffie_group),
+                            },
+                            authentication_method_attribute: Attribute {
+                                attribute_type: U16::from(AttributeType::AuthenticationMethod),
+                                attribute_value_or_length: U16::from(auth_method),
+                            },
+                            life_type_attribute: Attribute {
+                                attribute_type: U16::from(AttributeType::LifeType),
+                                attribute_value_or_length: U16::from(1),
+                            },
+                            life_duration_attribute: Attribute {
+                                attribute_type: U16::from(AttributeType::LifeDuration),
+                                attribute_value_or_length: U16::from(4),
+                            },
+
+                            life_duration_value: U64::from(288000),
+                        });
+                        self.proposal_payload.number_of_transforms += 1;
+                    }
+                }
+            }
+        }
+        let transform_length: U16 = U16::from(self.transform.len() as u16);
+        println!("Vector length {:?}", transform_length);
+        let proposal_length: U16 = U16::from(8) + transform_length;
+
+        self.proposal_payload.length = proposal_length;
+        let security_association_length = proposal_length + U16::from(12);
+        self.security_association_payload.sa_length = security_association_length;
+        let ike_packet_length: U32 = U32::from(28) + U32::from(security_association_length);
+        self.header.length = ike_packet_length;
+        println!("header length {:?}", ike_packet_length);
+    }
+
+    //convert to bytes
+    pub fn convert_to_bytes(&mut self) -> Vec<u8> {
+        let mut ike_v1_bytes = vec![];
+        ike_v1_bytes.extend_from_slice(self.header.as_bytes());
+        ike_v1_bytes.extend_from_slice(self.security_association_payload.as_bytes());
+        ike_v1_bytes.extend_from_slice(self.proposal_payload.as_bytes());
+        ike_v1_bytes.extend_from_slice(self.transform.as_bytes());
+        ike_v1_bytes
+    }
+}
+
+///Wrapper Struct for Transforms
+#[derive(Debug, Copy, Clone, AsBytes)]
+#[repr(packed)]
+pub struct Transform {
     pub transform_payload: TransformPayload,
-    pub encr_attribute: Attribute,
+    pub encryption_attribute: Attribute,
     pub hash_attribute: Attribute,
     pub diffie_hellman_attribute: Attribute,
     pub authentication_method_attribute: Attribute,
@@ -22,19 +101,6 @@ pub struct IkeV1 {
     pub life_duration_value: U64,
 }
 
-impl IkeV1 {
-    pub fn calculate_length(&mut self) {
-        self.transform_payload.length = U16::from(36);
-        let proposal_length: U16 = (U16::from(8))
-            + ((self.transform_payload.length)
-                * (U16::from(self.proposal_payload.number_of_transforms as u16)));
-        self.proposal_payload.length = proposal_length;
-        let security_association_length: U16 = proposal_length + (U16::from(12));
-        self.security_association_payload.sa_length = security_association_length;
-        let ike_packet_length: U32 = U32::from(28) + U32::from(security_association_length);
-        self.header.length = ike_packet_length;
-    }
-}
 ///Ikev2 Packet
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(packed)]
@@ -189,7 +255,7 @@ impl PayloadTypeV2 {
     }
 }
 
-#[derive(Debug, Copy, Clone, AsBytes)]
+#[derive(Debug, Clone, AsBytes)]
 #[repr(u8)]
 pub enum ExchangeType {
     IdentityProtect,
@@ -198,13 +264,13 @@ pub enum ExchangeType {
     NewGroupMode,
 }
 
-impl From<ExchangeType> for u8 {
+impl From<ExchangeType> for U16 {
     fn from(value: ExchangeType) -> Self {
         match value {
-            ExchangeType::IdentityProtect => 2,
-            ExchangeType::AggressiveExchange => 4,
-            ExchangeType::QuickMode => 32,
-            ExchangeType::NewGroupMode => 33,
+            ExchangeType::IdentityProtect => U16::from(2),
+            ExchangeType::AggressiveExchange => U16::from(4),
+            ExchangeType::QuickMode => U16::from(32),
+            ExchangeType::NewGroupMode => U16::from(33),
         }
     }
 }
@@ -220,7 +286,7 @@ impl ExchangeType {
         }
     }
 }
-#[derive(Debug, Copy, Clone, AsBytes)]
+#[derive(Debug, Clone, AsBytes)]
 #[repr(u8)]
 pub enum ExchangeTypeV2 {
     IkeSaInit,
@@ -253,7 +319,7 @@ impl ExchangeTypeV2 {
 }
 
 ///Enncryption Algorithms nach iana
-#[derive(Debug, Copy, Clone, AsBytes)]
+#[derive(Debug, Clone, AsBytes)]
 #[repr(u8)]
 pub enum EncryptionAlgorithmV1 {
     DES,
@@ -297,7 +363,7 @@ impl EncryptionAlgorithmV1 {
     }
 }
 //HashType
-#[derive(Debug, Copy, Clone, AsBytes)]
+#[derive(Debug, Clone, AsBytes)]
 #[repr(u8)]
 pub enum HashType {
     MD5,
@@ -307,6 +373,8 @@ pub enum HashType {
     SHA2_256,
     SHA2_384,
     SHA2_512,
+    AES128CMAC,
+    STREEBOG512,
 }
 
 impl From<HashType> for U16 {
@@ -319,6 +387,8 @@ impl From<HashType> for U16 {
             HashType::SHA2_256 => 5,
             HashType::SHA2_384 => 6,
             HashType::SHA2_512 => 7,
+            HashType::AES128CMAC => 8,
+            HashType::STREEBOG512 => 9,
         })
     }
 }
@@ -333,13 +403,15 @@ impl HashType {
             5 => Some(HashType::SHA2_256),
             6 => Some(HashType::SHA2_384),
             7 => Some(HashType::SHA2_512),
+            8 => Some(HashType::AES128CMAC),
+            9 => Some(HashType::STREEBOG512),
             _ => None,
         }
     }
 }
 
 ///Authentication Method
-#[derive(Debug, Copy, Clone, AsBytes)]
+#[derive(Debug, Clone, AsBytes)]
 #[repr(u8)]
 pub enum AuthenticationMethod {
     PreSharedKey,
@@ -375,7 +447,7 @@ impl AuthenticationMethod {
 }
 
 ///Diffie-Hellman Gruppen vollständig
-#[derive(Debug, Copy, Clone, AsBytes)]
+#[derive(Debug, Clone, AsBytes)]
 #[repr(u8)]
 pub enum DhGroup {
     MODP768bit,
@@ -518,7 +590,7 @@ pub struct ProposalPayload {
     pub proposal: u8,
     pub protocol_id: u8,
     pub spi_size: u8,
-    pub number_of_transforms: u8,
+    pub number_of_transforms: u32,
     //pub spi: u32,
 }
 
@@ -570,7 +642,7 @@ impl ProtocolIdV2 {
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(packed)]
 pub struct TransformPayload {
-    pub next_payload: u8,
+    pub next_payload: PayloadTypeV1,
     pub reserved: u8,
     pub length: U16,
     pub transform_number: u8,
