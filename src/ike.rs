@@ -14,17 +14,19 @@ pub struct IkeV1 {
     pub transform: Vec<Transform>,
 }
 
-///wenn letzte transformation dann next_payload auf 0 setzen! todo(wie machen?)
 impl IkeV1 {
     pub fn build_transforms_calculate_length(&mut self) {
-        self.proposal_payload.number_of_transforms = 1;
+        self.proposal_payload.number_of_transforms = 0;
         let mut count_transform = 1;
-        let mut payload = PayloadTypeV1::Transform;
+        let mut payload: u8 = 3;
         for auth_method in 1..=5 {
             //for diffie_group in (1..=21).chain(24..=24).chain(28..=34) {
             for diffie_group in 1..=5 {
-                for hash in 1..=7 {
-                    for encryption in 1..=8 {
+                for hash in 1..=2 {
+                    for encryption in 1..=5 {
+                        if encryption == 5 && auth_method == 5 && diffie_group == 5 && hash == 2 {
+                            payload = 0;
+                        }
                         self.transform.push(Transform {
                             transform_payload: TransformPayload {
                                 next_payload: payload,
@@ -58,8 +60,7 @@ impl IkeV1 {
                                 attribute_type: U16::from(AttributeType::LifeDuration),
                                 attribute_value_or_length: U16::from(4),
                             },
-
-                            life_duration_value: U64::from(288000),
+                            life_duration_value: U32::from(28800),
                         });
                         self.proposal_payload.number_of_transforms += 1;
                         count_transform += 1;
@@ -67,11 +68,9 @@ impl IkeV1 {
                 }
             }
         }
-        payload = PayloadTypeV1::NoNextPayload;
-        let transform_length: U16 = U16::from(self.transform.len() as u16);
-        println!("Vector length {:?}", transform_length);
-        let proposal_length: U16 = U16::from(8) + transform_length;
-
+        println!("{:?}", self.proposal_payload.number_of_transforms);
+        let proposal_length: U16 = U16::from(8) + U16::from((self.transform.len() * 36) as u16);
+        println!("{:?}", proposal_length);
         self.proposal_payload.length = proposal_length;
         let security_association_length = proposal_length + U16::from(12);
         self.security_association_payload.sa_length = security_association_length;
@@ -102,7 +101,7 @@ pub struct Transform {
     pub authentication_method_attribute: Attribute,
     pub life_type_attribute: Attribute,
     pub life_duration_attribute: Attribute,
-    pub life_duration_value: U64,
+    pub life_duration_value: U32,
 }
 
 ///Ikev2 Packet
@@ -594,7 +593,7 @@ pub struct ProposalPayload {
     pub proposal: u8,
     pub protocol_id: u8,
     pub spi_size: u8,
-    pub number_of_transforms: u32,
+    pub number_of_transforms: u8,
     //pub spi: u32,
 }
 
@@ -646,7 +645,7 @@ impl ProtocolIdV2 {
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(packed)]
 pub struct TransformPayload {
-    pub next_payload: PayloadTypeV1,
+    pub next_payload: u8,
     pub reserved: u8,
     pub length: U16,
     pub transform_number: u8,
