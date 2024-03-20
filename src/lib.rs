@@ -1,7 +1,6 @@
 use std::io;
 use std::net::SocketAddr;
 
-use nom::IResult;
 use rand::random;
 use rand::Rng;
 use tokio::net::UdpSocket;
@@ -9,13 +8,21 @@ use zerocopy::network_endian::U16;
 use zerocopy::network_endian::U32;
 use zerocopy::network_endian::U64;
 use zerocopy::AsBytes;
+use zerocopy::FromBytes;
 
+use crate::ike::Attribute;
 use crate::ike::IkeV1;
 use crate::ike::IkeV1Header;
+use crate::ike::IkeV1Response;
+use crate::ike::NotifyPayloadV1;
 use crate::ike::PayloadTypeV1::NoNextPayload;
 use crate::ike::PayloadTypeV1::SecurityAssociation;
 use crate::ike::ProposalPayload;
 use crate::ike::SecurityAssociationV1;
+use crate::ike::Transform;
+use crate::ike::TransformPayload;
+use crate::ike::VendorIDPayloadV1;
+use crate::parse_ike::ResponsePacket;
 
 pub mod ike;
 pub mod ikev2;
@@ -36,7 +43,7 @@ pub async fn scan() -> io::Result<()> {
         header: IkeV1Header {
             initiator_spi: U64::from(initiator_spi),
             responder_spi: 0,
-            next_payload: SecurityAssociation,
+            next_payload: u8::from(SecurityAssociation),
             version: 16,
             exchange_type: 2,
             flag: 0,
@@ -44,14 +51,14 @@ pub async fn scan() -> io::Result<()> {
             length: Default::default(),
         },
         security_association_payload: SecurityAssociationV1 {
-            sa_next_payload: NoNextPayload,
+            sa_next_payload: u8::from(NoNextPayload),
             reserved: 0,
             sa_length: Default::default(),
             sa_doi: U32::from(1),
             sa_situation: U32::from(1),
         },
         proposal_payload: ProposalPayload {
-            next_payload: 0,
+            next_payload: u8::from(NoNextPayload),
             reserved: 0,
             length: Default::default(),
             proposal: 1,
@@ -75,8 +82,17 @@ pub async fn scan() -> io::Result<()> {
     );
 
     let mut buf = [0u8; 112];
-    let (bytes, addr) = socket.recv_from(&mut buf).await?;
+    let (bytes, addr) = socket
+        .recv_from(&mut buf)
+        .await
+        .expect("couldn't read buffer");
     println!("{:?} Bytes erhalten von {:?}", bytes, addr);
+
+    let byte_slice = buf.as_slice();
+    println!("{:?}", byte_slice);
+
+    let ike_response = ResponsePacket::read_from(byte_slice);
+    println!("Response: {:?}", ike_response);
 
     Ok(())
 }

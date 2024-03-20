@@ -3,6 +3,8 @@ use std::mem::size_of;
 use zerocopy;
 use zerocopy::network_endian::*;
 use zerocopy::AsBytes;
+use zerocopy::FromBytes;
+use zerocopy::FromZeroes;
 
 ///Ike Wrapper Struct
 /// Ikev1 Packet
@@ -18,7 +20,7 @@ impl IkeV1 {
     pub fn build_transforms_calculate_length(&mut self) {
         self.proposal_payload.number_of_transforms = 0;
         let mut count_transform = 1;
-        let mut payload: u8 = 3;
+        let mut payload: u8 = u8::from(PayloadTypeV1::Transform);
         for auth_method in 1..=5 {
             //for diffie_group in (1..=21).chain(24..=24).chain(28..=34) {
             for diffie_group in 1..=5 {
@@ -91,7 +93,7 @@ impl IkeV1 {
 }
 
 ///Wrapper Struct for Transforms
-#[derive(Debug, Copy, Clone, AsBytes)]
+#[derive(Debug, Copy, Clone, AsBytes, FromZeroes, FromBytes)]
 #[repr(packed)]
 pub struct Transform {
     pub transform_payload: TransformPayload,
@@ -104,6 +106,45 @@ pub struct Transform {
     pub life_duration_value: U32,
 }
 
+///Wrapper struct for ike v1 response
+/// todo(struct zum verarbeiten der bytes erstellen, header, sa, proposal, transform, notify, vendor)
+/// ggf löschen
+#[derive(Debug, Clone, FromBytes, FromZeroes)]
+#[repr(packed)]
+pub struct IkeV1Response {
+    pub header: IkeV1Header,
+    pub security_association_payload: SecurityAssociationV1,
+    pub proposal_payload: ProposalPayload,
+    pub transform: Transform,
+    pub notify_payload: NotifyPayloadV1,
+    pub vendor_payload: VendorIDPayloadV1,
+}
+
+impl IkeV1Response {
+    fn parse_response(self) {
+        let diffie_hellman = self
+            .transform
+            .diffie_hellman_attribute
+            .attribute_value_or_length;
+        let encryption_algorithm = self
+            .transform
+            .encryption_attribute
+            .attribute_value_or_length;
+        let hash_type = self.transform.hash_attribute.attribute_value_or_length;
+        let authentication_method = self
+            .transform
+            .authentication_method_attribute
+            .attribute_value_or_length;
+        let notify_message = self.notify_payload.notify_message_type;
+
+        if notify_message == U16::from(14) {
+            println!("No valid Transform found, Error {:?}", notify_message)
+        }
+        println!("Found valid Transform: Encryption Algorithm is {:?}, Hash Type is {:?}, Diffie-Hellman-Group is {:?}, Authentication Method is {:?}", 
+                 encryption_algorithm, hash_type, diffie_hellman, authentication_method);
+    }
+}
+
 ///Ikev2 Packet
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(packed)]
@@ -113,12 +154,12 @@ pub struct IkeV2 {
 }
 
 ///Ike Header
-#[derive(Debug, Copy, Clone, AsBytes)]
+#[derive(Debug, Copy, Clone, AsBytes, FromBytes, FromZeroes)]
 #[repr(packed)]
 pub struct IkeV1Header {
     pub initiator_spi: U64,
     pub responder_spi: u64,
-    pub next_payload: PayloadTypeV1,
+    pub next_payload: u8,
     pub version: u8,
     pub exchange_type: u8,
     pub flag: u8,
@@ -535,10 +576,10 @@ impl DhGroup {
 
 ///Defining Payloads
 ///Security Association Payload Version 1 and 2
-#[derive(Debug, Copy, Clone, AsBytes)]
+#[derive(Debug, Copy, Clone, AsBytes, FromBytes, FromZeroes)]
 #[repr(packed)]
 pub struct SecurityAssociationV1 {
-    pub sa_next_payload: PayloadTypeV1,
+    pub sa_next_payload: u8,
     pub reserved: u8,
     pub sa_length: U16,
     pub sa_doi: U32,
@@ -583,7 +624,7 @@ pub struct SecurityAssociationV2 {
 }
 
 ///Proposal Payload
-#[derive(Debug, Copy, Clone, AsBytes)]
+#[derive(Debug, Copy, Clone, AsBytes, FromBytes, FromZeroes)]
 #[repr(packed)]
 ///rfc 2408 page 28
 pub struct ProposalPayload {
@@ -642,7 +683,7 @@ impl ProtocolIdV2 {
 }
 
 /// Transform Payload for IkeV1 (rfc 2408 page 30)
-#[derive(Debug, Copy, Clone, AsBytes)]
+#[derive(Debug, Copy, Clone, AsBytes, FromBytes, FromZeroes)]
 #[repr(packed)]
 pub struct TransformPayload {
     pub next_payload: u8,
@@ -653,7 +694,7 @@ pub struct TransformPayload {
     pub reserved2: u16,
 }
 ///Attribute
-#[derive(Debug, Copy, Clone, AsBytes)]
+#[derive(Debug, Copy, Clone, AsBytes, FromBytes, FromZeroes)]
 #[repr(packed)]
 pub struct Attribute {
     pub attribute_type: U16,
@@ -689,4 +730,28 @@ pub struct TransformV2 {
     pub reserved: u8,
     pub length: U16,
     pub transform_type: u8,
+}
+
+///Notify Payload Ike version 1 (RFC 2408 page 39)
+/// notify_message_type always with value 14 (=no proposal chosen)
+#[derive(Debug, Clone, Copy, FromBytes, FromZeroes)]
+#[repr(packed)]
+pub struct NotifyPayloadV1 {
+    pub next_payload: u8,
+    pub reserved: u8,
+    pub length: u16,
+    pub doi: u64,
+    pub protocol_id: u8,
+    pub spi_size: u8,
+    pub notify_message_type: U16,
+}
+
+///VendorID Payload Ike version 1, RFC 2408 page 43
+#[derive(Debug, Clone, Copy, FromBytes, FromZeroes)]
+#[repr(packed)]
+pub struct VendorIDPayloadV1 {
+    pub next_payload: u8,
+    pub reserved: u8,
+    pub length: u16,
+    pub vendor_id: u16,
 }
