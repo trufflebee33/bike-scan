@@ -13,7 +13,6 @@ use zerocopy::FromBytes;
 use crate::ike::Attribute;
 use crate::ike::IkeV1;
 use crate::ike::IkeV1Header;
-use crate::ike::IkeV1Response;
 use crate::ike::NotifyPayloadV1;
 use crate::ike::PayloadTypeV1::NoNextPayload;
 use crate::ike::PayloadTypeV1::SecurityAssociation;
@@ -22,6 +21,7 @@ use crate::ike::SecurityAssociationV1;
 use crate::ike::Transform;
 use crate::ike::TransformPayload;
 use crate::ike::VendorIDPayloadV1;
+use crate::parse_ike::ResponseAttribute;
 use crate::parse_ike::ResponsePacket;
 
 pub mod ike;
@@ -72,7 +72,7 @@ pub async fn scan() -> io::Result<()> {
     let bytes = ike_v1.convert_to_bytes();
     //let mut test = ike_v1.transform_payload.transform_number;
     //println!("Transform Payload {:?}", ike_v1.transform_payload);
-    dbg!(std::mem::size_of::<IkeV1>());
+    dbg!(std::mem::size_of::<ResponsePacket>());
 
     let send_ike_v1 = socket.send(&bytes).await;
 
@@ -91,8 +91,9 @@ pub async fn scan() -> io::Result<()> {
     let byte_slice = buf.as_slice();
     println!("{:?}", byte_slice);
 
-    let ike_response = ResponsePacket::read_from(byte_slice);
+    let ike_response = ResponsePacket::read_from_prefix(byte_slice).expect("Slice too short");
     println!("Response: {:?}", ike_response);
-
+    ike_response.parse_response();
+    //todo(Was tun bei notify message, konzept überlegen und aufschreiben, antwort ist kürzer und würde alles verschieben -> neues Paket zum parsen bauen)
     Ok(())
 }

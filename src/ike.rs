@@ -70,7 +70,10 @@ impl IkeV1 {
                 }
             }
         }
-        println!("{:?}", self.proposal_payload.number_of_transforms);
+        println!(
+            "{:?} Transforms generiert",
+            self.proposal_payload.number_of_transforms
+        );
         let proposal_length: U16 = U16::from(8) + U16::from((self.transform.len() * 36) as u16);
         println!("{:?}", proposal_length);
         self.proposal_payload.length = proposal_length;
@@ -104,45 +107,6 @@ pub struct Transform {
     pub life_type_attribute: Attribute,
     pub life_duration_attribute: Attribute,
     pub life_duration_value: U32,
-}
-
-///Wrapper struct for ike v1 response
-/// todo(struct zum verarbeiten der bytes erstellen, header, sa, proposal, transform, notify, vendor)
-/// ggf löschen
-#[derive(Debug, Clone, FromBytes, FromZeroes)]
-#[repr(packed)]
-pub struct IkeV1Response {
-    pub header: IkeV1Header,
-    pub security_association_payload: SecurityAssociationV1,
-    pub proposal_payload: ProposalPayload,
-    pub transform: Transform,
-    pub notify_payload: NotifyPayloadV1,
-    pub vendor_payload: VendorIDPayloadV1,
-}
-
-impl IkeV1Response {
-    fn parse_response(self) {
-        let diffie_hellman = self
-            .transform
-            .diffie_hellman_attribute
-            .attribute_value_or_length;
-        let encryption_algorithm = self
-            .transform
-            .encryption_attribute
-            .attribute_value_or_length;
-        let hash_type = self.transform.hash_attribute.attribute_value_or_length;
-        let authentication_method = self
-            .transform
-            .authentication_method_attribute
-            .attribute_value_or_length;
-        let notify_message = self.notify_payload.notify_message_type;
-
-        if notify_message == U16::from(14) {
-            println!("No valid Transform found, Error {:?}", notify_message)
-        }
-        println!("Found valid Transform: Encryption Algorithm is {:?}, Hash Type is {:?}, Diffie-Hellman-Group is {:?}, Authentication Method is {:?}", 
-                 encryption_algorithm, hash_type, diffie_hellman, authentication_method);
-    }
 }
 
 ///Ikev2 Packet
@@ -308,13 +272,13 @@ pub enum ExchangeType {
     NewGroupMode,
 }
 
-impl From<ExchangeType> for U16 {
+impl From<ExchangeType> for u8 {
     fn from(value: ExchangeType) -> Self {
         match value {
-            ExchangeType::IdentityProtect => U16::from(2),
-            ExchangeType::AggressiveExchange => U16::from(4),
-            ExchangeType::QuickMode => U16::from(32),
-            ExchangeType::NewGroupMode => U16::from(33),
+            ExchangeType::IdentityProtect => 2,
+            ExchangeType::AggressiveExchange => 4,
+            ExchangeType::QuickMode => 32,
+            ExchangeType::NewGroupMode => 33,
         }
     }
 }

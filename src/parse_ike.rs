@@ -1,7 +1,11 @@
+use zerocopy::network_endian::U16;
+use zerocopy::network_endian::U32;
+use zerocopy::network_endian::U64;
 use zerocopy::FromBytes;
 use zerocopy::FromZeroes;
 
-///todo(Ike paket bauen, reponsewrappe zum parsen benutzen)
+use crate::ike::ExchangeType;
+
 #[derive(Debug, Clone, Copy, FromBytes, FromZeroes)]
 #[repr(packed)]
 pub struct ResponsePacket {
@@ -10,39 +14,93 @@ pub struct ResponsePacket {
     pub proposal_payload: ResponseProposalPayload,
     pub transform_payload: ResponseTransformWrapped,
     pub vendor_id_payload: ResponseVendorID,
+    pub notify_payload: RespondNotify,
 }
 
+impl ResponsePacket {
+    pub fn parse_response(self) {
+        let diffie_hellman = self
+            .transform_payload
+            .diffie_hellman_attribute
+            .attribute_value_or_length;
+        let encryption_algorithm = self
+            .transform_payload
+            .encryption_attribute
+            .attribute_value_or_length;
+        let hash_type = self
+            .transform_payload
+            .hash_attribute
+            .attribute_value_or_length;
+        let authentication_method = self
+            .transform_payload
+            .authentication_method_attribute
+            .attribute_value_or_length;
+        let notify_message = self.notify_payload.notify_message_type;
+        //parse Ike Version
+        if self.header.version == 16 {
+            println!("Ike Version is IkeV1")
+        } else if self.header.version == 32 {
+            println!("Ike Version is IkeV2")
+        } else {
+            println!("Invalid Version")
+        }
+
+        //Print Exchange Type
+        if self.header.exchange_type == u8::from(ExchangeType::IdentityProtect) {
+            println!("Exchange Type is Main Mode")
+        } else if self.header.exchange_type == u8::from(ExchangeType::AggressiveExchange) {
+            println!("Exchange Type is Aggressive Mode")
+        } else {
+            println!("No valid Exchange Type")
+        }
+
+        //Print Transforms
+        if notify_message == U16::from(14) {
+            println!("No valid Transform found, Error {:?}", notify_message)
+        }
+        println!("Found valid Transform: Encryption Algorithm is {:?}, Hash Type is {:?}, Diffie-Hellman-Group is {:?}, Authentication Method is {:?}",
+                 encryption_algorithm.get(), hash_type.get(), diffie_hellman.get(), authentication_method.get());
+    }
+}
+
+///Response Wrapper Struct for Notify Message
+#[derive(Debug, Clone, Copy, FromBytes, FromZeroes)]
+#[repr(packed)]
+pub struct ResponsePacketNotify {
+    pub header: ResponseHeader,
+    pub notify_payload: RespondNotify,
+}
 #[derive(Debug, Clone, Copy, FromBytes, FromZeroes)]
 #[repr(packed)]
 pub struct ResponseHeader {
-    pub initiator_spi: [u64; 8],
-    pub responder_spi: [u64; 8],
-    pub next_payload: [u8; 1],
-    pub version: [u8; 1],
-    pub exchange_type: [u8; 1],
-    pub flag: [u8; 1],
-    pub message_id: [u32; 4],
-    pub length: [u32; 4],
+    pub initiator_spi: U64,
+    pub responder_spi: U64,
+    pub next_payload: u8,
+    pub version: u8,
+    pub exchange_type: u8,
+    pub flag: u8,
+    pub message_id: U32,
+    pub length: U32,
 }
 #[derive(Debug, Clone, Copy, FromBytes, FromZeroes)]
 #[repr(packed)]
 pub struct ResponseSecurityAssociationPayload {
-    pub sa_next_payload: [u8; 1],
-    pub reserved: [u8; 1],
-    pub sa_length: [u16; 2],
-    pub sa_doi: [u32; 4],
-    pub sa_situation: [u32; 4],
+    pub sa_next_payload: u8,
+    pub reserved: u8,
+    pub sa_length: U16,
+    pub sa_doi: U32,
+    pub sa_situation: U32,
 }
 #[derive(Debug, Clone, Copy, FromBytes, FromZeroes)]
 #[repr(packed)]
 pub struct ResponseProposalPayload {
-    pub next_payload: [u8; 1],
-    pub reserved: [u8; 1],
-    pub length: [u16; 2],
-    pub proposal_number: [u8; 1],
-    pub protocol_id: [u8; 1],
-    pub spi_size: [u8; 1],
-    pub number_of_transforms: [u8; 1],
+    pub next_payload: u8,
+    pub reserved: u8,
+    pub length: U16,
+    pub proposal_number: u8,
+    pub protocol_id: u8,
+    pub spi_size: u8,
+    pub number_of_transforms: u8,
 }
 #[derive(Debug, Copy, Clone, FromZeroes, FromBytes)]
 #[repr(packed)]
@@ -54,43 +112,43 @@ pub struct ResponseTransformWrapped {
     pub authentication_method_attribute: ResponseAttribute,
     pub life_type_attribute: ResponseAttribute,
     pub life_duration_attribute: ResponseAttribute,
-    pub life_duration_value: [u32; 2],
+    pub life_duration_value: U32,
 }
 #[derive(Debug, Clone, Copy, FromBytes, FromZeroes)]
 #[repr(packed)]
 pub struct ResponseTransformPayload {
-    pub next_payload: [u8; 1],
-    pub reserved: [u8; 1],
-    pub length: [u16; 2],
-    pub transform_number: [u8; 1],
-    pub transform_id: [u8; 1],
-    pub reserved2: [u16; 2],
+    pub next_payload: u8,
+    pub reserved: u8,
+    pub length: U16,
+    pub transform_number: u8,
+    pub transform_id: u8,
+    pub reserved2: U16,
 }
 #[derive(Debug, Copy, Clone, FromBytes, FromZeroes)]
 #[repr(packed)]
 pub struct ResponseAttribute {
-    pub attribute_type: [u16; 2],
-    pub attribute_value_or_length: [u16; 2],
+    pub attribute_type: U16,
+    pub attribute_value_or_length: U16,
 }
 
 #[derive(Debug, Copy, Clone, FromBytes, FromZeroes)]
 #[repr(packed)]
 pub struct ResponseVendorID {
-    pub next_payload: [u8; 1],
-    pub reserved: [u8; 1],
-    pub length: [u16; 2],
-    pub vendor_id: [u16; 8],
+    pub next_payload: u8,
+    pub reserved: u8,
+    pub length: U16,
+    pub vendor_id: U16,
 }
 
 ///todo(notify in extra struct, weil bei fehler nur notify payload gesendet wird)
 #[derive(Debug, Copy, Clone, FromBytes, FromZeroes)]
 #[repr(packed)]
 pub struct RespondNotify {
-    pub next_payload: [u8; 1],
-    pub reserved: [u8; 1],
-    pub length: [u16; 2],
-    pub doi: [u64; 4],
-    pub protocol_id: [u8; 1],
-    pub spi_size: [u8; 1],
-    pub notify_message_type: [u16; 2],
+    pub next_payload: u8,
+    pub reserved: u8,
+    pub length: U16,
+    pub doi: U64,
+    pub protocol_id: u8,
+    pub spi_size: u8,
+    pub notify_message_type: U16,
 }
