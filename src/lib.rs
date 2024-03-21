@@ -1,27 +1,19 @@
 use std::io;
 use std::net::SocketAddr;
 
-use rand::random;
 use rand::Rng;
 use tokio::net::UdpSocket;
-use zerocopy::network_endian::U16;
 use zerocopy::network_endian::U32;
 use zerocopy::network_endian::U64;
 use zerocopy::AsBytes;
 use zerocopy::FromBytes;
 
-use crate::ike::Attribute;
 use crate::ike::IkeV1;
 use crate::ike::IkeV1Header;
-use crate::ike::NotifyPayloadV1;
 use crate::ike::PayloadTypeV1::NoNextPayload;
 use crate::ike::PayloadTypeV1::SecurityAssociation;
 use crate::ike::ProposalPayload;
 use crate::ike::SecurityAssociationV1;
-use crate::ike::Transform;
-use crate::ike::TransformPayload;
-use crate::ike::VendorIDPayloadV1;
-use crate::parse_ike::ResponseAttribute;
 use crate::parse_ike::ResponsePacket;
 
 pub mod ike;
@@ -70,8 +62,6 @@ pub async fn scan() -> io::Result<()> {
     };
     ike_v1.build_transforms_calculate_length();
     let bytes = ike_v1.convert_to_bytes();
-    //let mut test = ike_v1.transform_payload.transform_number;
-    //println!("Transform Payload {:?}", ike_v1.transform_payload);
     dbg!(std::mem::size_of::<ResponsePacket>());
 
     let send_ike_v1 = socket.send(&bytes).await;

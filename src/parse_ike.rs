@@ -70,6 +70,7 @@ pub struct ResponsePacketNotify {
     pub header: ResponseHeader,
     pub notify_payload: RespondNotify,
 }
+
 #[derive(Debug, Clone, Copy, FromBytes, FromZeroes)]
 #[repr(packed)]
 pub struct ResponseHeader {

@@ -1,10 +1,15 @@
+use std::io;
 use std::mem::size_of;
+use std::net::SocketAddr;
 
+use tokio::net::UdpSocket;
 use zerocopy;
 use zerocopy::network_endian::*;
 use zerocopy::AsBytes;
 use zerocopy::FromBytes;
 use zerocopy::FromZeroes;
+
+use crate::scan;
 
 ///Ike Wrapper Struct
 /// Ikev1 Packet
@@ -19,15 +24,17 @@ pub struct IkeV1 {
 impl IkeV1 {
     pub fn build_transforms_calculate_length(&mut self) {
         self.proposal_payload.number_of_transforms = 0;
-        let mut count_transform = 1;
+        let mut count_transform = 0;
         let mut payload: u8 = u8::from(PayloadTypeV1::Transform);
         for auth_method in 1..=5 {
-            //for diffie_group in (1..=21).chain(24..=24).chain(28..=34) {
-            for diffie_group in 1..=5 {
-                for hash in 1..=2 {
-                    for encryption in 1..=5 {
-                        if encryption == 5 && auth_method == 5 && diffie_group == 5 && hash == 2 {
+            for diffie_group in (1..=21).chain(24..=24).chain(28..=34) {
+                for hash in 1..=7 {
+                    for encryption in 1..=8 {
+                        if count_transform == 255 {
                             payload = 0;
+                            //count_transform = 0;
+                            //self.proposal_payload.number_of_transforms = 0;s
+                            break;
                         }
                         self.transform.push(Transform {
                             transform_payload: TransformPayload {
@@ -268,6 +275,7 @@ impl PayloadTypeV2 {
 pub enum ExchangeType {
     IdentityProtect,
     AggressiveExchange,
+    Informational,
     QuickMode,
     NewGroupMode,
 }
@@ -277,6 +285,7 @@ impl From<ExchangeType> for u8 {
         match value {
             ExchangeType::IdentityProtect => 2,
             ExchangeType::AggressiveExchange => 4,
+            ExchangeType::Informational => 5,
             ExchangeType::QuickMode => 32,
             ExchangeType::NewGroupMode => 33,
         }
@@ -288,6 +297,7 @@ impl ExchangeType {
         match value {
             2 => Some(ExchangeType::IdentityProtect),
             4 => Some(ExchangeType::AggressiveExchange),
+            5 => Some(ExchangeType::Informational),
             32 => Some(ExchangeType::QuickMode),
             33 => Some(ExchangeType::NewGroupMode),
             _ => None,
