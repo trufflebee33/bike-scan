@@ -21,9 +21,9 @@ impl IkeV1 {
     pub fn build_transforms() -> Vec<Transform> {
         let mut transform_vec = vec![];
         let payload: u8 = u8::from(PayloadTypeV1::Transform);
-        for auth_method in 1..=5 {
+        for auth_method in (1..=5).chain(9..=11) {
             for diffie_group in (1..=21).chain(24..=24).chain(28..=34) {
-                for hash in 1..=7 {
+                for hash in 1..=6 {
                     for encryption in 1..=8 {
                         transform_vec.push(Transform {
                             transform_payload: TransformPayload {
@@ -83,13 +83,11 @@ impl IkeV1 {
     pub fn calculate_length(&mut self) {
         let proposal_length: U16 =
             U16::from(8 + (self.proposal_payload.number_of_transforms as u16) * 36);
-        println!("{:?}", proposal_length);
         self.proposal_payload.length = proposal_length;
         let security_association_length: U16 = proposal_length + U16::from(12);
         self.security_association_payload.sa_length = security_association_length;
         let ike_packet_length: U32 = U32::from(28) + U32::from(security_association_length);
         self.header.length = ike_packet_length;
-        println!("header length {:?}", ike_packet_length);
     }
 
     //convert to bytes

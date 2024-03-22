@@ -36,30 +36,52 @@ impl ResponsePacket {
             .authentication_method_attribute
             .attribute_value_or_length;
         let notify_message = self.notify_payload.notify_message_type;
-        //parse Ike Version
-        if self.header.version == 16 {
-            println!("Ike Version is IkeV1")
-        } else if self.header.version == 32 {
-            println!("Ike Version is IkeV2")
-        } else {
-            println!("Invalid Version")
-        }
 
-        //Print Exchange Type
-        if self.header.exchange_type == u8::from(ExchangeType::IdentityProtect) {
-            println!("Exchange Type is Main Mode")
-        } else if self.header.exchange_type == u8::from(ExchangeType::AggressiveExchange) {
-            println!("Exchange Type is Aggressive Mode")
-        } else {
-            println!("No valid Exchange Type")
+        //save valid transforms
+        let mut valid_encryption_algorithm = vec![];
+        let mut valid_hash_type = vec![];
+        let mut valid_diffie_hellman_group = vec![];
+        let mut valid_authentication_method = vec![];
+        if encryption_algorithm.get() > 0
+            && hash_type.get() > 0
+            && diffie_hellman.get() > 0
+            && authentication_method.get() > 0
+        {
+            valid_encryption_algorithm.push(encryption_algorithm.get());
+            valid_hash_type.push(hash_type.get());
+            valid_diffie_hellman_group.push(diffie_hellman.get());
+            valid_authentication_method.push(authentication_method.get());
+
+            if !valid_encryption_algorithm.is_empty()
+                && !valid_hash_type.is_empty()
+                && !valid_diffie_hellman_group.is_empty()
+                && !valid_authentication_method.is_empty()
+            {
+                //parse Ike Version
+                if self.header.version == 16 {
+                    println!("Ike Version is IkeV1")
+                } else if self.header.version == 32 {
+                    println!("Ike Version is IkeV2")
+                } else {
+                    println!("Invalid Version")
+                }
+                //Print Exchange Type
+                if self.header.exchange_type == u8::from(ExchangeType::IdentityProtect) {
+                    println!("Exchange Type is Main Mode")
+                } else if self.header.exchange_type == u8::from(ExchangeType::AggressiveExchange) {
+                    println!("Exchange Type is Aggressive Mode")
+                } else {
+                    println!("No valid Exchange Type")
+                }
+                println!("Found valid transforms: Encryption Algorithm is {:?}, Hash Type is {:?}, Diffie-Hellman-Group is {:?}, Authentication Method is {:?}", 
+                         valid_encryption_algorithm, valid_hash_type, valid_diffie_hellman_group, valid_authentication_method);
+            }
         }
 
         //Print Transforms
         if notify_message == U16::from(14) {
             println!("No valid Transform found, Error {:?}", notify_message)
         }
-        println!("Found valid Transform: Encryption Algorithm is {:?}, Hash Type is {:?}, Diffie-Hellman-Group is {:?}, Authentication Method is {:?}",
-                 encryption_algorithm.get(), hash_type.get(), diffie_hellman.get(), authentication_method.get());
     }
 }
 

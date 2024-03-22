@@ -1,5 +1,7 @@
 use std::io;
 use std::net::SocketAddr;
+use std::thread::sleep;
+use std::time;
 
 use rand::Rng;
 use tokio::net::UdpSocket;
@@ -32,8 +34,6 @@ pub async fn scan() -> io::Result<()> {
     let transforms = IkeV1::build_transforms();
     for chunk in transforms.chunks(255) {
         let initiator_spi: u64 = rand::thread_rng().gen();
-
-        println!("Initiator SPI für IkeV1: {:8x}", initiator_spi);
         //Ike Version 1 Packet
         let mut ike_v1 = IkeV1 {
             header: IkeV1Header {
@@ -67,29 +67,23 @@ pub async fn scan() -> io::Result<()> {
         ike_v1.set_transforms(chunk);
         ike_v1.calculate_length();
         let bytes = ike_v1.convert_to_bytes();
-        dbg!(std::mem::size_of::<ResponsePacket>());
 
-        let send_ike_v1 = socket.send(&bytes).await;
+        socket.send(&bytes).await.expect("Couldn't send packet");
 
-        println!(
-            "Sende Wrapper Paket an {:?}: {:?} bytes",
-            remote_addr, send_ike_v1
-        );
+        //println!("Sende Wrapper Paket an {:?}: {:?} bytes", remote_addr, send_ike_v1);
 
         let mut buf = [0u8; 112];
         let (bytes, addr) = socket
             .recv_from(&mut buf)
             .await
             .expect("couldn't read buffer");
-        println!("{:?} Bytes erhalten von {:?}", bytes, addr);
 
         let byte_slice = buf.as_slice();
-        println!("{:?}", byte_slice);
 
         let ike_response = ResponsePacket::read_from_prefix(byte_slice).expect("Slice too short");
-        println!("Response: {:?}", ike_response);
         ike_response.parse_response();
-        //todo(Was tun bei notify message, konzept überlegen und aufschreiben, antwort ist kürzer und würde alles verschieben -> neues Paket zum parsen bauen)
+        let seconds = time::Duration::from_millis(1360);
+        tokio::time::sleep(seconds).await;
     }
     Ok(())
 }
