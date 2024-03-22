@@ -1,15 +1,11 @@
 use std::io;
 use std::mem::size_of;
-use std::net::SocketAddr;
 
-use tokio::net::UdpSocket;
 use zerocopy;
 use zerocopy::network_endian::*;
 use zerocopy::AsBytes;
 use zerocopy::FromBytes;
 use zerocopy::FromZeroes;
-
-use crate::scan;
 
 ///Ike Wrapper Struct
 /// Ikev1 Packet
@@ -22,26 +18,19 @@ pub struct IkeV1 {
 }
 
 impl IkeV1 {
-    pub fn build_transforms_calculate_length(&mut self) {
-        self.proposal_payload.number_of_transforms = 0;
-        let mut count_transform = 0;
-        let mut payload: u8 = u8::from(PayloadTypeV1::Transform);
+    pub fn build_transforms() -> Vec<Transform> {
+        let mut transform_vec = vec![];
+        let payload: u8 = u8::from(PayloadTypeV1::Transform);
         for auth_method in 1..=5 {
             for diffie_group in (1..=21).chain(24..=24).chain(28..=34) {
                 for hash in 1..=7 {
                     for encryption in 1..=8 {
-                        if count_transform == 255 {
-                            payload = 0;
-                            //count_transform = 0;
-                            //self.proposal_payload.number_of_transforms = 0;s
-                            break;
-                        }
-                        self.transform.push(Transform {
+                        transform_vec.push(Transform {
                             transform_payload: TransformPayload {
                                 next_payload: payload,
                                 reserved: 0,
                                 length: U16::from(36),
-                                transform_number: count_transform,
+                                transform_number: 0,
                                 transform_id: 1,
                                 reserved2: 0,
                             },
@@ -71,20 +60,32 @@ impl IkeV1 {
                             },
                             life_duration_value: U32::from(28800),
                         });
-                        self.proposal_payload.number_of_transforms += 1;
-                        count_transform += 1;
                     }
                 }
             }
         }
-        println!(
-            "{:?} Transforms generiert",
-            self.proposal_payload.number_of_transforms
-        );
-        let proposal_length: U16 = U16::from(8) + U16::from((self.transform.len() * 36) as u16);
+        transform_vec
+    }
+
+    pub fn set_transforms(&mut self, transforms: &[Transform]) {
+        let length = transforms.len();
+        let length_checked = u8::try_from(length).expect("Too many transforms");
+        self.proposal_payload.number_of_transforms = length_checked;
+        let mut change_transforms = Vec::from(transforms);
+        for i in 0..length_checked {
+            change_transforms[i as usize]
+                .transform_payload
+                .transform_number = i;
+        }
+        change_transforms[length - 1].transform_payload.next_payload = 0;
+        self.transform = change_transforms
+    }
+    pub fn calculate_length(&mut self) {
+        let proposal_length: U16 =
+            U16::from(8 + (self.proposal_payload.number_of_transforms as u16) * 36);
         println!("{:?}", proposal_length);
         self.proposal_payload.length = proposal_length;
-        let security_association_length = proposal_length + U16::from(12);
+        let security_association_length: U16 = proposal_length + U16::from(12);
         self.security_association_payload.sa_length = security_association_length;
         let ike_packet_length: U32 = U32::from(28) + U32::from(security_association_length);
         self.header.length = ike_packet_length;
