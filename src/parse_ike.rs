@@ -47,6 +47,7 @@ impl ResponsePacket {
             && diffie_hellman.get() > 0
             && authentication_method.get() > 0
         {
+            //todo(check ike version bevor die attribute in vektor gepusht werden)
             valid_encryption_algorithm.push(encryption_algorithm.get());
             valid_hash_type.push(hash_type.get());
             valid_diffie_hellman_group.push(diffie_hellman.get());

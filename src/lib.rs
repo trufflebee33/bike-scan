@@ -14,7 +14,6 @@ use crate::ike::IkeV1;
 use crate::ike::IkeV1Header;
 use crate::ike::PayloadTypeV1::NoNextPayload;
 use crate::ike::PayloadTypeV1::SecurityAssociation;
-use crate::ike::PayloadTypeV1::Transform;
 use crate::ike::ProposalPayload;
 use crate::ike::SecurityAssociationV1;
 use crate::parse_ike::ResponsePacket;
@@ -28,11 +27,10 @@ pub async fn scan() -> io::Result<()> {
     let remote_addr = "192.168.122.68:500".parse::<SocketAddr>().unwrap();
     socket.connect(remote_addr).await?;
 
-    //calculate random Initiator Security Parameter Index
-
     //sendng packet
     let transforms = IkeV1::build_transforms();
     for chunk in transforms.chunks(255) {
+        //calculate random Initiator Security Parameter Index
         let initiator_spi: u64 = rand::thread_rng().gen();
         //Ike Version 1 Packet
         let mut ike_v1 = IkeV1 {
@@ -73,13 +71,14 @@ pub async fn scan() -> io::Result<()> {
         //println!("Sende Wrapper Paket an {:?}: {:?} bytes", remote_addr, send_ike_v1);
 
         let mut buf = [0u8; 112];
-        let (bytes, addr) = socket
+        socket
             .recv_from(&mut buf)
             .await
             .expect("couldn't read buffer");
 
         let byte_slice = buf.as_slice();
 
+        //parse Ike Response
         let ike_response = ResponsePacket::read_from_prefix(byte_slice).expect("Slice too short");
         ike_response.parse_response();
         let seconds = time::Duration::from_millis(1360);
