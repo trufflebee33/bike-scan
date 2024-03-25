@@ -115,14 +115,6 @@ pub struct Transform {
     pub life_duration_value: U32,
 }
 
-///Ikev2 Packet
-#[derive(Debug, Copy, Clone, AsBytes)]
-#[repr(packed)]
-pub struct IkeV2 {
-    pub header: IkeV2Header,
-    //todo(sa payload, proposal payload, transforms, attribute)
-}
-
 ///Ike Header
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes, FromZeroes)]
 #[repr(packed)]
@@ -137,18 +129,6 @@ pub struct IkeV1Header {
     pub length: U32,
 }
 
-#[derive(Debug, Copy, Clone, AsBytes)]
-#[repr(packed)]
-pub struct IkeV2Header {
-    pub initiator_spi: U64,
-    pub responder_spi: u64,
-    pub next_payload: PayloadTypeV2,
-    pub version: u8,
-    pub exchange_type: u8,
-    pub flag: u8,
-    pub message_id: u32,
-    pub length: U32,
-}
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(u8)]
 pub enum PayloadTypeV1 {
@@ -207,67 +187,6 @@ impl PayloadTypeV1 {
         }
     }
 }
-#[derive(Debug, Copy, Clone, AsBytes)]
-#[repr(u8)]
-pub enum PayloadTypeV2 {
-    SecurityAssociation,
-    KeyExchange,
-    IdentificationInitiator,
-    IdentificationResponder,
-    Certificate,
-    CertificateRequest,
-    Authentication,
-    Nonce,
-    Notify,
-    VendorID,
-    TrafficSelectorInitiator,
-    TrafficSelectorResponder,
-    Encrypted,
-    Configuration,
-}
-
-impl From<PayloadTypeV2> for u8 {
-    fn from(value: PayloadTypeV2) -> Self {
-        match value {
-            PayloadTypeV2::SecurityAssociation => 33,
-            PayloadTypeV2::KeyExchange => 34,
-            PayloadTypeV2::IdentificationInitiator => 35,
-            PayloadTypeV2::IdentificationResponder => 36,
-            PayloadTypeV2::Certificate => 37,
-            PayloadTypeV2::CertificateRequest => 38,
-            PayloadTypeV2::Authentication => 39,
-            PayloadTypeV2::Nonce => 40,
-            PayloadTypeV2::Notify => 41,
-            PayloadTypeV2::VendorID => 43,
-            PayloadTypeV2::TrafficSelectorInitiator => 44,
-            PayloadTypeV2::TrafficSelectorResponder => 45,
-            PayloadTypeV2::Encrypted => 46,
-            PayloadTypeV2::Configuration => 47,
-        }
-    }
-}
-
-impl PayloadTypeV2 {
-    fn try_from_u8(value: u8) -> Option<Self> {
-        match value {
-            33 => Some(PayloadTypeV2::SecurityAssociation),
-            34 => Some(PayloadTypeV2::KeyExchange),
-            35 => Some(PayloadTypeV2::IdentificationInitiator),
-            36 => Some(PayloadTypeV2::IdentificationResponder),
-            37 => Some(PayloadTypeV2::Certificate),
-            38 => Some(PayloadTypeV2::CertificateRequest),
-            39 => Some(PayloadTypeV2::Authentication),
-            40 => Some(PayloadTypeV2::Nonce),
-            41 => Some(PayloadTypeV2::Notify),
-            43 => Some(PayloadTypeV2::VendorID),
-            44 => Some(PayloadTypeV2::TrafficSelectorInitiator),
-            45 => Some(PayloadTypeV2::TrafficSelectorResponder),
-            46 => Some(PayloadTypeV2::Encrypted),
-            47 => Some(PayloadTypeV2::Configuration),
-            _ => None,
-        }
-    }
-}
 
 #[derive(Debug, Clone, AsBytes)]
 #[repr(u8)]
@@ -299,37 +218,6 @@ impl ExchangeType {
             5 => Some(ExchangeType::Informational),
             32 => Some(ExchangeType::QuickMode),
             33 => Some(ExchangeType::NewGroupMode),
-            _ => None,
-        }
-    }
-}
-#[derive(Debug, Clone, AsBytes)]
-#[repr(u8)]
-pub enum ExchangeTypeV2 {
-    IkeSaInit,
-    IkeAuth,
-    CreateChildSa,
-    Informational,
-}
-
-impl From<ExchangeTypeV2> for u8 {
-    fn from(value: ExchangeTypeV2) -> Self {
-        match value {
-            ExchangeTypeV2::IkeSaInit => 34,
-            ExchangeTypeV2::IkeAuth => 35,
-            ExchangeTypeV2::CreateChildSa => 36,
-            ExchangeTypeV2::Informational => 37,
-        }
-    }
-}
-
-impl ExchangeTypeV2 {
-    fn try_from_u8(value: u8) -> Option<Self> {
-        match value {
-            34 => Some(ExchangeTypeV2::IkeSaInit),
-            35 => Some(ExchangeTypeV2::IkeAuth),
-            36 => Some(ExchangeTypeV2::CreateChildSa),
-            37 => Some(ExchangeTypeV2::Informational),
             _ => None,
         }
     }
@@ -587,14 +475,6 @@ impl SaSituation {
         }
     }
 }
-///Security Assocaition Payload for IkeV2 RFC 4306 page 47
-#[derive(Debug, Copy, Clone, AsBytes)]
-#[repr(packed)]
-pub struct SecurityAssociationV2 {
-    sa2_next_payload: PayloadTypeV2,
-    sa2_reserved: u8,
-    sa2_length: U16,
-}
 
 ///Proposal Payload
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes, FromZeroes)]
@@ -609,50 +489,6 @@ pub struct ProposalPayload {
     pub spi_size: u8,
     pub number_of_transforms: u8,
     //pub spi: u32,
-}
-
-///Proposal Payload IkeV2 RFC 4306 page 48
-#[derive(Debug, Copy, Clone, AsBytes)]
-#[repr(packed)]
-pub struct ProposalPayloadV2 {
-    pub next_proposal: u8,
-    pub reserved: u8,
-    pub length: U16,
-    pub proposal_number: u8,
-    pub protocol_id: ProtocolIdV2,
-    pub spi_size: u8,
-    pub number_of_transforms: u8,
-}
-#[derive(Debug, Copy, Clone, AsBytes)]
-#[repr(u8)]
-pub enum ProtocolIdV2 {
-    Reserved,
-    IKE,
-    AuthenticationHeader,
-    EncapsulationSecurityPayload,
-}
-
-impl From<ProtocolIdV2> for u8 {
-    fn from(value: ProtocolIdV2) -> Self {
-        match value {
-            ProtocolIdV2::Reserved => 0,
-            ProtocolIdV2::IKE => 1,
-            ProtocolIdV2::AuthenticationHeader => 2,
-            ProtocolIdV2::EncapsulationSecurityPayload => 3,
-        }
-    }
-}
-
-impl ProtocolIdV2 {
-    fn try_from_u8(value: u8) -> Option<Self> {
-        match value {
-            0 => Some(ProtocolIdV2::Reserved),
-            1 => Some(ProtocolIdV2::IKE),
-            2 => Some(ProtocolIdV2::AuthenticationHeader),
-            3 => Some(ProtocolIdV2::EncapsulationSecurityPayload),
-            _ => None,
-        }
-    }
 }
 
 /// Transform Payload for IkeV1 (rfc 2408 page 30)
@@ -695,14 +531,6 @@ impl From<AttributeType> for U16 {
             AttributeType::LifeDuration => 12,
         })
     }
-}
-
-///Transform Payload for IkeV2 Rfc 4306 page 49
-pub struct TransformV2 {
-    pub next_transform: u8,
-    pub reserved: u8,
-    pub length: U16,
-    pub transform_type: u8,
 }
 
 ///Notify Payload Ike version 1 (RFC 2408 page 39)
