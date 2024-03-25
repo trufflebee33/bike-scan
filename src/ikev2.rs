@@ -9,13 +9,34 @@ use zerocopy::FromZeroes;
 //todo: attribute der transforms definieren (dh gruppem, encryption, authentication, hash)
 //todo: wrapper struct fuer ikev2 paket bauen, wrapper fuer transforms mit attributen bauen (rfc)
 ///Ikev2 Packet
-#[derive(Debug, Copy, Clone, AsBytes)]
-#[repr(packed)]
+#[derive(Debug, Clone)]
 pub struct IkeV2 {
     pub header: IkeV2Header,
     pub sa_payload_v2: SecurityAssociationV2,
     pub proposal_v2: Proposal,
-    pub transform_v2: TransformV2,
+    pub transform: Vec<TransformWrapperV2>,
+}
+//todo(Attribute impln)
+impl IkeV2 {
+    fn build_transforms_v2(&mut self) {
+        let mut transform_vec_v2 = vec![];
+        for encryption_v2 in (1..=9).chain(11..=16).chain(18..=35) {
+            transform_vec_v2.push(TransformWrapperV2 {
+                transform: TransformV2 {
+                    next_transform: 0,
+                    reserved: 0,
+                    length: Default::default(),
+                    transform_type: u8::from(TransformTypeValues::EncryptionAlgorithm),
+                    reserved2: 0,
+                    transform_id: encryption_v2,
+                },
+                attribute: AttributeV2 {
+                    attribute_type: Default::default(),
+                    attribute_value: Default::default(),
+                },
+            })
+        }
+    }
 }
 
 ///Ike Version 2 Header (Rfc 4306, page 42)
@@ -200,6 +221,14 @@ pub struct TransformV2 {
     pub transform_type: u8,
     pub reserved2: u8,
     pub transform_id: u8,
+}
+
+///Wrapper struct for transforms
+#[derive(Debug, Copy, Clone, AsBytes)]
+#[repr(packed)]
+pub struct TransformWrapperV2 {
+    pub transform: TransformV2,
+    pub attribute: AttributeV2,
 }
 
 ///Key Length Attribute
