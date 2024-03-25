@@ -1,23 +1,11 @@
-//Ablauf
-//Exchanges
-//Initiate
-//CREATE_CHILD_SA
-//inforamtive
-
-//Payloads
-//SA Payload
-//KEy Exchange Payload
-//Certificate Payload
-//Certificate request payload
-//Auhtnetication Payload
-//Notify Payload
-
 use zerocopy::network_endian::U16;
 use zerocopy::network_endian::U32;
 use zerocopy::network_endian::U64;
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use zerocopy::AsBytes;
+use zerocopy::FromBytes;
+use zerocopy::FromZeroes;
 
-//todo(header, sa payload, proposal payload, transformationen ggf. key exchange payload)
+//done(header, sa payload, proposal payload, transformationen ggf. key exchange payload)
 //todo: attribute der transforms definieren (dh gruppem, encryption, authentication, hash)
 //todo: wrapper struct fuer ikev2 paket bauen, wrapper fuer transforms mit attributen bauen (rfc)
 ///Ikev2 Packet
@@ -25,7 +13,9 @@ use zerocopy::{AsBytes, FromBytes, FromZeroes};
 #[repr(packed)]
 pub struct IkeV2 {
     pub header: IkeV2Header,
-    //todo(sa payload, proposal payload, transforms, attribute)
+    pub sa_payload_v2: SecurityAssociationV2,
+    pub proposal_v2: Proposal,
+    pub transform_v2: TransformV2,
 }
 
 ///Ike Version 2 Header (Rfc 4306, page 42)
@@ -157,7 +147,7 @@ pub struct Proposal {
     pub reserved: u8,
     pub length: U16,
     pub proposal_number: u8,
-    pub protocol_id: u8::from(ProtocolId),
+    pub protocol_id: ProtocolId,
     pub spi_size: u8,
     pub number_of_transforms: u8,
 }
@@ -170,7 +160,7 @@ pub enum ProtocolId {
     AuthenticationHeader,
     EncapsulationSecurityPayload,
     FcEspHeader,
-    FcCtAuthentication
+    FcCtAuthentication,
 }
 
 impl From<ProtocolId> for u8 {
@@ -180,8 +170,8 @@ impl From<ProtocolId> for u8 {
             ProtocolId::IKE => 1,
             ProtocolId::AuthenticationHeader => 2,
             ProtocolId::EncapsulationSecurityPayload => 3,
-            ProtocolId::FcEspHeader => {4}
-            ProtocolId::FcCtAuthentication => {5}
+            ProtocolId::FcEspHeader => 4,
+            ProtocolId::FcCtAuthentication => 5,
         }
     }
 }
@@ -200,7 +190,9 @@ impl ProtocolId {
     }
 }
 
-///Transform Payload for IkeV2 Rfc 4306 page 49
+///Transform Payload for IkeV2 Rfc 7296 page 79
+#[derive(Debug, Copy, Clone, AsBytes)]
+#[repr(packed)]
 pub struct TransformV2 {
     pub next_transform: u8,
     pub reserved: u8,
@@ -215,5 +207,47 @@ pub struct TransformV2 {
 #[repr(packed)]
 pub struct AttributeV2 {
     pub attribute_type: U16,
-    pub attribute_value_or_length: U16,
+    pub attribute_value: U16,
+}
+///key length of AES_CBC and AES_CTR
+#[derive(Debug, Copy, Clone, AsBytes)]
+#[repr(u8)]
+pub enum AttributeValue {
+    Bit128,
+    Bit192,
+    Bit256,
+}
+
+impl From<AttributeValue> for U16 {
+    fn from(value: AttributeValue) -> Self {
+        Self::new(match value {
+            AttributeValue::Bit128 => 10,
+            AttributeValue::Bit192 => 12,
+            AttributeValue::Bit256 => 14,
+        })
+    }
+}
+
+///Defining Transform Types and IDs
+/// Transform Type Values
+#[derive(Debug, Copy, Clone, AsBytes)]
+#[repr(u8)]
+pub enum TransformTypeValues {
+    EncryptionAlgorithm,
+    PseudoRandomFunction,
+    IntegrityAlgorithm,
+    DiffieHellmanGroup,
+    ExtendedSequenceNumbers,
+}
+
+impl From<TransformTypeValues> for u8 {
+    fn from(value: TransformTypeValues) -> Self {
+        match value {
+            TransformTypeValues::EncryptionAlgorithm => 1,
+            TransformTypeValues::PseudoRandomFunction => 2,
+            TransformTypeValues::IntegrityAlgorithm => 3,
+            TransformTypeValues::DiffieHellmanGroup => 4,
+            TransformTypeValues::ExtendedSequenceNumbers => 5,
+        }
+    }
 }
