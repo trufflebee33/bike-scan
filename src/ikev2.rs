@@ -1,3 +1,8 @@
+use openssl::bn::BigNumRef;
+use openssl::dh;
+use openssl::dh::Dh;
+use openssl::dh::DhRef;
+use openssl::pkey::PKey;
 use zerocopy::network_endian::U128;
 use zerocopy::network_endian::U16;
 use zerocopy::network_endian::U32;
@@ -20,7 +25,7 @@ pub struct IkeV2 {
     pub integrity_algorithm_transform: Vec<TransformV2>,
     pub diffie_transform: Vec<TransformV2>,
     pub key_exchange: KeyExchangePayloadV2,
-    pub key_exchange_date: U128,
+    pub key_exchange_data: Vec<u8>,
     pub nonce_payload: NoncePayloadV2,
     pub nonce_data: U64,
 }
@@ -125,6 +130,21 @@ impl IkeV2 {
         self.diffie_transform = change_transform
     }
 
+    pub fn generate_key_exchange_data(&mut self) {
+        let prime_len = 2048;
+        let diffie_hellman = Dh::generate_params(prime_len, 2).unwrap();
+        let private_key = diffie_hellman.generate_key().unwrap();
+        let public_key = private_key.public_key();
+
+        let key_exchange_data = public_key
+            .to_vec_padded(i32::try_from(prime_len).unwrap())
+            .unwrap();
+
+        println!("{}", key_exchange_data.len());
+
+        self.key_exchange_data = key_exchange_data;
+    }
+
     pub fn calculate_length_v2(&mut self) {
         let mut length = U16::from(0);
         for encr in &mut self.encryption_transforms {
@@ -167,7 +187,7 @@ impl IkeV2 {
         bytes_v2.extend_from_slice(self.integrity_algorithm_transform.as_bytes());
         bytes_v2.extend_from_slice(self.diffie_transform.as_bytes());
         bytes_v2.extend_from_slice(self.key_exchange.as_bytes());
-        bytes_v2.extend_from_slice(self.key_exchange_date.as_bytes());
+        bytes_v2.extend_from_slice(self.key_exchange_data.as_bytes());
         bytes_v2.extend_from_slice(self.nonce_payload.as_bytes());
         bytes_v2.extend_from_slice(self.nonce_data.as_bytes());
         bytes_v2
@@ -461,6 +481,7 @@ pub struct KeyExchangePayloadV2 {
     pub diffie_hellman_group: U32,
     pub reserved2: U32,
 }
+
 ///Nonce Payload RFC 7296 page 99
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes, FromZeroes, PartialEq)]
 #[repr(packed)]

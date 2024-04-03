@@ -1,3 +1,9 @@
+//! # bike-scan
+//!
+//! TODO more informations
+
+#![warn(missing_docs, clippy::expect_used, clippy::unwrap_used)]
+
 use std::io;
 use std::net::SocketAddr;
 use std::thread::sleep;
@@ -99,7 +105,6 @@ pub async fn scan() -> io::Result<()> {
     }*/
     //sending IKE Version 2 Packet
     let transforms_v2 = IkeV2::build_transforms_v2();
-    let key_data: u128 = rand::thread_rng().gen();
     for encryption_chunk in transforms_v2.0.chunks(63) {
         for prf_chunk in transforms_v2.1.chunks(63) {
             for integrity_algorithm_chunk in transforms_v2.2.chunks(63) {
@@ -143,7 +148,7 @@ pub async fn scan() -> io::Result<()> {
                             diffie_hellman_group: U32::from(14),
                             reserved2: Default::default(),
                         },
-                        key_exchange_date: U128::from(key_data),
+                        key_exchange_data: Default::default(),
                         nonce_payload: NoncePayloadV2 {
                             next_payload_: 0,
                             critical_bit: 0,

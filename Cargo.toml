@@ -10,3 +10,5 @@ tokio = { version = "~1", features = ["full"] }
 zerocopy = { version = "0.7", features = ["derive", "byteorder"] }
 byteorder = "1"
 rand = "0.8"
+openssl = { version = "0.10", features = ["vendored"] }
+log = "0.4.21"
