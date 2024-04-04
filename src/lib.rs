@@ -14,7 +14,7 @@ use rand::random;
 use rand::Rng;
 use tokio::net::UdpSocket;
 use zerocopy::network_endian::U128;
-use zerocopy::network_endian::U32;
+use zerocopy::network_endian::U16;
 use zerocopy::network_endian::U64;
 use zerocopy::AsBytes;
 use zerocopy::FromBytes;
@@ -110,11 +110,10 @@ pub async fn scan() -> io::Result<()> {
             for integrity_algorithm_chunk in transforms_v2.2.chunks(63) {
                 for diffie_group_chunk in transforms_v2.3.chunks(63) {
                     let initiator_spi_v2: u64 = rand::thread_rng().gen();
-                    let nonce: u64 = rand::thread_rng().gen();
                     let mut ike_v2 = IkeV2 {
                         header: IkeV2Header {
                             initiator_spi: U64::from(initiator_spi_v2),
-                            responder_spi: 0,
+                            responder_spi: U64::from(0),
                             next_payload: u8::from(PayloadTypeV2::SecurityAssociation),
                             version: 32,
                             exchange_type: u8::from(ExchangeTypeV2::IkeSaInit),
@@ -142,20 +141,18 @@ pub async fn scan() -> io::Result<()> {
                         diffie_transform: vec![],
                         key_exchange: KeyExchangePayloadV2 {
                             next_payload: u8::from(PayloadTypeV2::Nonce),
-                            critical_bit: 0,
                             reserved: 0,
                             length: Default::default(),
-                            diffie_hellman_group: U32::from(14),
+                            diffie_hellman_group: U16::from(2),
                             reserved2: Default::default(),
                         },
-                        key_exchange_data: Default::default(),
+                        key_exchange_data: vec![],
                         nonce_payload: NoncePayloadV2 {
                             next_payload_: 0,
-                            critical_bit: 0,
                             reserved: 0,
                             length: Default::default(),
                         },
-                        nonce_data: U64::from(nonce),
+                        nonce_data: vec![],
                     };
                     ike_v2.set_transforms_v2(
                         encryption_chunk,
@@ -163,6 +160,8 @@ pub async fn scan() -> io::Result<()> {
                         integrity_algorithm_chunk,
                         diffie_group_chunk,
                     );
+                    ike_v2.generate_key_exchange_data();
+                    ike_v2.generate_nonce_data();
                     ike_v2.calculate_length_v2();
 
                     let bytes_v2 = ike_v2.convert_to_bytes_v2();

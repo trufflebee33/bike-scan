@@ -3,6 +3,10 @@ use openssl::dh;
 use openssl::dh::Dh;
 use openssl::dh::DhRef;
 use openssl::pkey::PKey;
+use rand::distributions::Alphanumeric;
+use rand::random;
+use rand::thread_rng;
+use rand::Rng;
 use zerocopy::network_endian::U128;
 use zerocopy::network_endian::U16;
 use zerocopy::network_endian::U32;
@@ -27,7 +31,7 @@ pub struct IkeV2 {
     pub key_exchange: KeyExchangePayloadV2,
     pub key_exchange_data: Vec<u8>,
     pub nonce_payload: NoncePayloadV2,
-    pub nonce_data: U64,
+    pub nonce_data: Vec<u8>,
 }
 //todo(Attribute impln)
 impl IkeV2 {
@@ -126,23 +130,30 @@ impl IkeV2 {
         self.integrity_algorithm_transform = Vec::from(integrity_algorithm);
         let mut change_transform = Vec::from(diffie_group);
         change_transform[diffie_group.len() - 1].next_transform =
-            u8::from(PayloadTypeV2::KeyExchange);
+            u8::from(PayloadTypeV2::NoNextPayload);
         self.diffie_transform = change_transform
     }
 
     pub fn generate_key_exchange_data(&mut self) {
-        let prime_len = 2048;
+        let prime_len = 1024;
         let diffie_hellman = Dh::generate_params(prime_len, 2).unwrap();
         let private_key = diffie_hellman.generate_key().unwrap();
+        println!("Primes: {}", private_key.prime_p().num_bytes());
         let public_key = private_key.public_key();
 
         let key_exchange_data = public_key
-            .to_vec_padded(i32::try_from(prime_len).unwrap())
+            .to_vec_padded(private_key.prime_p().num_bytes())
             .unwrap();
 
-        println!("{}", key_exchange_data.len());
+        println!("{:?}", key_exchange_data);
 
         self.key_exchange_data = key_exchange_data;
+    }
+
+    pub fn generate_nonce_data(&mut self) {
+        let nonce_data: Vec<u8> = (0..174).map(|_| random::<u8>()).collect();
+        println!("Nonce: {:?}", nonce_data);
+        self.nonce_data = nonce_data;
     }
 
     pub fn calculate_length_v2(&mut self) {
@@ -168,12 +179,17 @@ impl IkeV2 {
         let proposal_length = U16::from(8) + length;
         self.proposal_v2.length = proposal_length;
         println!("proposal length is {:?}", proposal_length);
-        let sa_length = proposal_length;
+        let sa_length = U16::from(4) + proposal_length;
         self.sa_payload_v2.sa2_length = sa_length;
         println!("Sa length is {:?}", sa_length);
-        self.key_exchange.length = U16::from(8);
-        self.nonce_payload.length = U16::from(24);
-        self.header.length = U32::from(28) + U32::from(sa_length);
+        self.key_exchange.length = U16::from(8 + (self.key_exchange_data.len() as u16));
+        println!("key exchange length: {:?}", self.key_exchange_data.len());
+        self.nonce_payload.length = U16::from(4 + (self.nonce_data.len() as u16));
+        println!("nonce length: {:?}", self.nonce_payload.length);
+        self.header.length = U32::from(28)
+            + U32::from(sa_length)
+            + U32::from(self.key_exchange.length)
+            + U32::from(self.nonce_payload.length);
         println!("Packet length is {:?}", self.header.length);
     }
 
@@ -199,7 +215,7 @@ impl IkeV2 {
 #[repr(packed)]
 pub struct IkeV2Header {
     pub initiator_spi: U64,
-    pub responder_spi: u64,
+    pub responder_spi: U64,
     pub next_payload: u8,
     pub version: u8,
     pub exchange_type: u8,
@@ -475,11 +491,10 @@ impl From<TransformTypeValues> for u8 {
 #[repr(packed)]
 pub struct KeyExchangePayloadV2 {
     pub next_payload: u8,
-    pub critical_bit: u8,
     pub reserved: u8,
     pub length: U16,
-    pub diffie_hellman_group: U32,
-    pub reserved2: U32,
+    pub diffie_hellman_group: U16,
+    pub reserved2: U16,
 }
 
 ///Nonce Payload RFC 7296 page 99
@@ -487,7 +502,6 @@ pub struct KeyExchangePayloadV2 {
 #[repr(packed)]
 pub struct NoncePayloadV2 {
     pub next_payload_: u8,
-    pub critical_bit: u8,
     pub reserved: u8,
     pub length: U16,
 }
