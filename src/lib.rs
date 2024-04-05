@@ -36,10 +36,12 @@ use crate::ikev2::ProtocolId;
 use crate::ikev2::SecurityAssociationV2;
 use crate::ikev2::TransformTypeValues::DiffieHellmanGroup;
 use crate::parse_ike::ResponsePacket;
+use crate::parse_ikev2::ResponsePacketV2;
 
 pub mod ike;
 pub mod ikev2;
 pub mod parse_ike;
+pub mod parse_ikev2;
 
 pub async fn scan() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
@@ -167,14 +169,18 @@ pub async fn scan() -> io::Result<()> {
                     let bytes_v2 = ike_v2.convert_to_bytes_v2();
                     socket.send(&bytes_v2).await.expect("Couldn't send packet");
 
-                    let mut buf = [0u8; 112];
+                    let mut buf_v2 = [0u8; 112];
                     socket
-                        .recv_from(&mut buf)
+                        .recv_from(&mut buf_v2)
                         .await
                         .expect("couldn't read buffer");
+                    let byte_slice_v2 = buf_v2.as_slice();
+                    let ike_v2_response = ResponsePacketV2::parse_ike_v2(byte_slice_v2).unwrap();
+                    if ike_v2_response.header.next_payload == 41 {}
                 }
             }
         }
     }
+
     Ok(())
 }
