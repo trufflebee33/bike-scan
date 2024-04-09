@@ -15,6 +15,7 @@ use rand::Rng;
 use tokio::net::UdpSocket;
 use zerocopy::network_endian::U128;
 use zerocopy::network_endian::U16;
+use zerocopy::network_endian::U32;
 use zerocopy::network_endian::U64;
 use zerocopy::AsBytes;
 use zerocopy::FromBytes;
@@ -47,7 +48,7 @@ pub async fn scan() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
     let remote_addr = "192.168.122.68:500".parse::<SocketAddr>().unwrap();
     socket.connect(remote_addr).await?;
-    /**
+
     //sending IKE Version 1 packet
     let transforms = IkeV1::build_transforms();
     for chunk in transforms.chunks(255) {
@@ -104,7 +105,7 @@ pub async fn scan() -> io::Result<()> {
         ike_response.parse_response();
         let seconds = time::Duration::from_millis(1360);
         tokio::time::sleep(seconds).await;
-    }*/
+    }
     //sending IKE Version 2 Packet
     let transforms_v2 = IkeV2::build_transforms_v2();
     for encryption_chunk in transforms_v2.0.chunks(63) {

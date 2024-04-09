@@ -528,6 +528,7 @@ pub struct SecurityAssociationV1 {
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(u8)]
 pub enum SaSituation {
+    //todo
     IdentityOnly,
     ///Geheimhaltung
     Secrecy,
@@ -567,9 +568,10 @@ pub struct ProposalPayload {
     pub reserved: u8,
     ///Länge des Payloads
     pub length: U16,
-    ///todo
+    ///Nummer des aktuellen Proposals im Payload (fängt bei 1 an)
     pub proposal: u8,
-    ///todo
+    ///spezifiziert die Protokoll-ID für die aktuelle Übertragung
+    /// 1 für IKE
     pub protocol_id: u8,
     ///Größe des Security Parameter Indexes (ist null)
     pub spi_size: u8,
