@@ -53,7 +53,7 @@ impl IkeV1 {
                                 length: U16::from(36),
                                 transform_number: 0,
                                 transform_id: 1,
-                                reserved2: 0,
+                                reserved2: U16::from(0),
                             },
                             encryption_attribute: Attribute {
                                 attribute_type: U16::from(AttributeType::Encryption),
@@ -597,7 +597,7 @@ pub struct TransformPayload {
     ///todo
     pub transform_id: u8,
     ///zweites reserviertes Feld (ist null)
-    pub reserved2: u16,
+    pub reserved2: U16,
 }
 ///Attribute
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes, FromZeroes)]
