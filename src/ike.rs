@@ -571,7 +571,7 @@ pub struct ProposalPayload {
     ///Nummer des aktuellen Proposals im Payload (fängt bei 1 an)
     pub proposal: u8,
     ///spezifiziert die Protokoll-ID für die aktuelle Übertragung
-    /// 1 für IKE
+    /// 1 für IKE-Protokoll
     pub protocol_id: u8,
     ///Größe des Security Parameter Indexes (ist null)
     pub spi_size: u8,

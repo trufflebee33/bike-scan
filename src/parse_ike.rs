@@ -254,7 +254,7 @@ pub struct RespondNotify {
     pub length: U16,
     ///Domain of Interpretation
     pub doi: U64,
-    ///Protokoll ID todo: welche ist ike
+    ///Protokoll ID todo: welche ist ike?
     pub protocol_id: u8,
     ///Größe des Security Parameter Indexes
     pub spi_size: u8,
