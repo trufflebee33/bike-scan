@@ -45,8 +45,16 @@ pub struct IkeV2 {
     ///Nonce
     pub nonce_data: Vec<u8>,
 }
-//todo(Attribute impln)
 impl IkeV2 {
+    ///In dieser Funktion werden die Transformationen erstellt.
+    /// Im Fall des Verschlüsselungsalgorithmus muss die Schlüssellänge bei ausgewählten
+    /// Verschlüsselungsverfahren mitangegeben werden (AES-CBC und AES-CTR).
+    /// Zuerst werden leere Vektoren für die Transformationen erstellt.
+    /// Anschließend werden diese nacheinander durch For-Schleifen mit den Werten gefüllt und in die jeweiligen
+    /// Vektoren gepusht.
+    /// Bei AES-CBC und AES-CTR (12 und 13) werden jeweils drei Transformationen mit den unterschiedlichen
+    /// Schlüssellängen erstellt.
+    /// Im Anschluss werden die Vektoren zurückgegeben.
     pub fn build_transforms_v2() -> (
         Vec<TransformAttributeV2>,
         Vec<TransformV2>,
@@ -126,6 +134,9 @@ impl IkeV2 {
         )
     }
 
+    ///Mit dieser Funktion wird sichergestellt, dass die Anzahl der Transformationen 255 in einem
+    /// Proposal nicht übersteigt.
+    /// Im unteren Teil wird die nächste Transformation auf null gesetzt
     pub fn set_transforms_v2(
         &mut self,
         encryption: &[TransformAttributeV2],
