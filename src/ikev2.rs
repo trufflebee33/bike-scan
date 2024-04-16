@@ -487,6 +487,7 @@ pub struct TransformAttributeV2 {
     ///nächste Transformation
     pub next_transform: u8,
     ///reservierter Bereich
+    pub reserved: u8,
     ///Länge einer Transformation
     pub length: U16,
     ///Typ der Transformation
