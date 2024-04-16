@@ -245,17 +245,25 @@ impl IkeV2 {
     }
 }
 
-///Ike Version 2 Header (Rfc 4306, page 42)
+///Ike Version 2 Header (Rfc 7296, Seite 72)
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(packed)]
 pub struct IkeV2Header {
+    ///Initiator Security Parameter Index
     pub initiator_spi: U64,
+    ///Responder Security Parameter Index, ist null
     pub responder_spi: U64,
+    ///nächster Payload
     pub next_payload: u8,
+    ///ike Version
     pub version: u8,
+    ///Austauschtyp (in Enum unten)
     pub exchange_type: u8,
+    ///Flags
     pub flag: u8,
+    ///Nachrichten ID, ist null
     pub message_id: u32,
+    ///Gesamtlänge des IkeV2 Pakets
     pub length: U32,
 }
 
@@ -263,16 +271,24 @@ pub struct IkeV2Header {
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(u8)]
 pub enum PayloadTypeV2 {
+    ///Kein nächster Payload
     NoNextPayload,
+    ///Security Association Payload
     SecurityAssociation,
+    ///Key Exchange Payload
     KeyExchange,
     IdentificationInitiator,
     IdentificationResponder,
     Certificate,
+    ///Certificate Request Payload
     CertificateRequest,
+    ///Authentication Payload
     Authentication,
+    ///Nonce Payload
     Nonce,
+    ///Notify Payload
     Notify,
+    ///Hersteller-ID Payload
     VendorID,
     TrafficSelectorInitiator,
     TrafficSelectorResponder,
@@ -324,13 +340,17 @@ impl PayloadTypeV2 {
         }
     }
 }
-
+///Austauschtypen (RFC 7296, Seite 74)
 #[derive(Debug, Clone, AsBytes)]
 #[repr(u8)]
 pub enum ExchangeTypeV2 {
+    ///Initialer Austausch
     IkeSaInit,
+    ///Authentifizierung
     IkeAuth,
+    ///Erstellen der Kind-SA
     CreateChildSa,
+    ///Informativer Austausch
     Informational,
 }
 
@@ -358,37 +378,53 @@ impl ExchangeTypeV2 {
 }
 
 ///Payloads
-///Security Association Payload for IkeV2 RFC 7296 page 77
+///Security Association Payload for IkeV2 (RFC 7296, Seite 77)
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(packed)]
 pub struct SecurityAssociationV2 {
+    ///nächster Payload
     pub sa2_next_payload: u8,
+    ///kritisches Bit
     pub critical_bit: u8,
+    ///Länge des Payloads
     pub sa2_length: U16,
 }
 
-///Proposal IkeV2 RFC 7296 page 80
-/// next_proposal can either be 0 (no proposal after the current) or 2 (another proposal follows)
+///Proposal IkeV2 (RFC 7296, Seite 80)
+/// next_proposal kann entweder null sein oder zwei falls noch ein Proposal folgt
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(packed)]
 pub struct Proposal {
+    ///nächstes Proposal
     pub next_proposal: u8,
+    ///reservierter Bereich
     pub reserved: u8,
+    ///Länge des Proposals
     pub length: U16,
+    ///Nummer des Proposals, fängt mit 1 an
     pub proposal_number: u8,
+    ///Protokoll ID: in Enum unten
     pub protocol_id: ProtocolId,
+    ///Größe des Security Parameter Index
     pub spi_size: u8,
+    ///Anzahl der Transformationen
     pub number_of_transforms: u8,
 }
-
+///Protokoll-IDs für das Proposal
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(u8)]
 pub enum ProtocolId {
+    ///reserviert
     Reserved,
+    ///Ike
     IKE,
+    ///Authentication Header
     AuthenticationHeader,
+    ///Encapsulation Security Payload
     EncapsulationSecurityPayload,
+    ///Fiber Channel Encapsulation Security Header
     FcEspHeader,
+    ///Fiber Channel Authentication Header
     FcCtAuthentication,
 }
 
@@ -419,48 +455,63 @@ impl ProtocolId {
     }
 }
 
-///Transform Payload for IkeV2 Rfc 7296 page 79
+///Transform Payload for IkeV2 (Rfc 7296, Seite 79)
 #[derive(Debug, Copy, Clone, AsBytes, PartialEq)]
 #[repr(packed)]
 pub struct TransformV2 {
+    ///nächste Transformation
     pub next_transform: u8,
+    ///reservierter Bereich
     pub reserved: u8,
+    ///Länge einer Transformation
     pub length: U16,
+    ///Typ der Transformation
     pub transform_type: u8,
+    ///zweiter reservierter Bereich
     pub reserved2: u8,
+    ///Transformations-ID (z.b. Diffie-Hellman Gruppe 1 hat die ID 1)
     pub transform_id: U16,
 }
 
 impl TransformV2 {
+    ///festlegen der Länge einer Transformation
     pub fn calculate_length(&mut self) {
         self.length = U16::from(8);
     }
 }
 
-///Wrapper struct for transforms
+///Wrapper struct für Transformation für den Verschlüsselungsalgorithmus
 #[derive(Debug, Copy, Clone, AsBytes, PartialEq)]
 #[repr(packed)]
 pub struct TransformAttributeV2 {
+    ///nächste Transformation
     pub next_transform: u8,
-    pub reserved: u8,
+    ///reservierter Bereich
+    ///Länge einer Transformation
     pub length: U16,
+    ///Typ der Transformation
     pub transform_type: u8,
+    ///zweiter reservierter Bereich
     pub reserved2: u8,
+    ///Transformations-ID (z.b. MD5 hat die ID 1)
     pub transform_id: U16,
+    ///Attribut für die Schlüssellänge
     pub attribute: AttributeV2,
 }
-
+///festlegen der Länge der Transformation
 impl TransformAttributeV2 {
     pub fn calculate_length(&mut self) {
         self.length = U16::from(4 + 8);
     }
 }
 
-///Key Length Attribute
+///Attribut für die Schlüssellänge
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes, FromZeroes, PartialEq)]
 #[repr(packed)]
 pub struct AttributeV2 {
+    ///Attribut Typ (in Enum AttributeType)
     pub attribute_type: U16,
+    ///Wert der Schlüssellänge (in Enum AttributeValue)
     pub attribute_value: U16,
 }
 
@@ -478,7 +529,7 @@ impl From<AttributeType> for U16 {
     }
 }
 
-///key length of AES_CBC and AES_CTR
+///Schlüssellängen für AES_CBC und AES_CTR
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(u8)]
 pub enum AttributeValue {
@@ -497,15 +548,19 @@ impl From<AttributeValue> for U16 {
     }
 }
 
-///Defining Transform Types and IDs
-/// Transform Type Values
+///Transformations-Typen (RFC 7296, Seite 82)
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(u8)]
 pub enum TransformTypeValues {
+    ///Verschlüsselungsalgorithmus
     EncryptionAlgorithm,
+    ///Pseudo Random Funktion
     PseudoRandomFunction,
+    ///Integritätsalgorithmus
     IntegrityAlgorithm,
+    ///Diffie-Hellman Gruppe
     DiffieHellmanGroup,
+    ///Extended Sequence Nummer (nur für Protokoll AH und ESP)
     ExtendedSequenceNumbers,
 }
 
@@ -521,22 +576,30 @@ impl From<TransformTypeValues> for u8 {
     }
 }
 
-///Key Exchange Payload RFC page 89
+///Key Exchange Payload (RFC, Seite 89)
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes, FromZeroes, PartialEq)]
 #[repr(packed)]
 pub struct KeyExchangePayloadV2 {
+    ///nächster Payload
     pub next_payload: u8,
+    ///reservierter Bereich
     pub reserved: u8,
+    ///Payload Länge
     pub length: U16,
+    ///Diffie-Hellman Gruppe
     pub diffie_hellman_group: U16,
+    ///zweiter reservierter Bereich
     pub reserved2: U16,
 }
 
-///Nonce Payload RFC 7296 page 99
+///Nonce Payload (RFC 7296, Seite 99)
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes, FromZeroes, PartialEq)]
 #[repr(packed)]
 pub struct NoncePayloadV2 {
+    ///nächster Payload
     pub next_payload_: u8,
+    ///reservierter Bereich
     pub reserved: u8,
+    ///Payload Länge
     pub length: U16,
 }
