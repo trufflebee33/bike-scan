@@ -18,19 +18,31 @@ use zerocopy::FromZeroes;
 //done(header, sa payload, proposal payload, transformationen ggf. key exchange payload)
 //todo: attribute der transforms definieren (dh gruppem, encryption, authentication, hash)
 //todo: wrapper struct fuer ikev2 paket bauen, wrapper fuer transforms mit attributen bauen (rfc)
-///Ikev2 Packet
+///Ike Version 2 Wrapper Struct
+/// in diesem Struct werden alle Bestandteile eines Ikev2 Pakets zusammengefasst
 #[derive(Debug, Clone)]
 pub struct IkeV2 {
+    ///Header
     pub header: IkeV2Header,
+    ///Security-Association-Payload
     pub sa_payload_v2: SecurityAssociationV2,
+    ///Proposal
     pub proposal_v2: Proposal,
+    ///Verschlüsselungsalgorithmus
     pub encryption_transforms: Vec<TransformAttributeV2>,
+    ///Pseudo Random Funktion
     pub prf_transform: Vec<TransformV2>,
+    ///Integritätsalgorithmus
     pub integrity_algorithm_transform: Vec<TransformV2>,
+    ///Diffie-Hellman Gruppe
     pub diffie_transform: Vec<TransformV2>,
+    ///Key-Exchange Data
     pub key_exchange: KeyExchangePayloadV2,
+    ///Key-Exchange Daten
     pub key_exchange_data: Vec<u8>,
+    ///Nonce Payload
     pub nonce_payload: NoncePayloadV2,
+    ///Nonce
     pub nonce_data: Vec<u8>,
 }
 //todo(Attribute impln)

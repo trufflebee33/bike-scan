@@ -507,7 +507,7 @@ impl DhGroup {
 }
 
 ///Defining Payloads
-///Security Association Payload Version 1 and 2
+///Security Association Payload Version 1
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes, FromZeroes)]
 #[repr(packed)]
 pub struct SecurityAssociationV1 {
@@ -594,7 +594,7 @@ pub struct TransformPayload {
     ///Nummer des Transforms
     /// fängt bei eins an
     pub transform_number: u8,
-    ///todo
+    ///legt das Protokoll fest, 1 fuer IPsec
     pub transform_id: u8,
     ///zweites reserviertes Feld (ist null)
     pub reserved2: U16,
