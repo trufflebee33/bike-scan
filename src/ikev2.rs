@@ -136,7 +136,7 @@ impl IkeV2 {
 
     ///Mit dieser Funktion wird sichergestellt, dass die Anzahl der Transformationen 255 in einem
     /// Proposal nicht übersteigt.
-    /// Im unteren Teil wird die nächste Transformation auf null gesetzt
+    /// Im unteren Teil wird bei der letzten Transformation next_transform auf null gesetzt
     pub fn set_transforms_v2(
         &mut self,
         encryption: &[TransformAttributeV2],
@@ -156,7 +156,12 @@ impl IkeV2 {
             u8::from(PayloadTypeV2::NoNextPayload);
         self.diffie_transform = change_transform
     }
-
+    ///Mit dieser Funktion werden die Key-Exchange-Daten generiert.
+    /// Zuerst werden die Parameter für den Diffie-Hellman-Austausch erzeugt.
+    /// Die Länge der Primzahl ist 1024 und der Generator ist 2.
+    /// Danach werden die Schlüssel erstellt.
+    /// Aus den Schlüsseln wird er Public Key extrahiert.
+    /// Aus dem Public Key wird die Primzahl extrahiert, diese bildet die Key-Exchange Daten
     pub fn generate_key_exchange_data(&mut self) {
         let prime_len = 1024;
         let diffie_hellman = Dh::generate_params(prime_len, 2).unwrap();
@@ -172,13 +177,19 @@ impl IkeV2 {
 
         self.key_exchange_data = key_exchange_data;
     }
-
+    ///In dieser Funktion wird die Nonce erstellt
     pub fn generate_nonce_data(&mut self) {
         let nonce_data: Vec<u8> = (0..174).map(|_| random::<u8>()).collect();
         println!("Nonce: {:?}", nonce_data);
         self.nonce_data = nonce_data;
     }
-
+    ///Mit dieser Funktion wird die Länge des gesamten IkeV2 Pakets berechnet.
+    /// Es wird zuerst die Länge der verschiedenen Transformationen berechnet,
+    /// die Längen werden aufeinader addiert.
+    /// Die Attributlänge (length) wird dann mit dem Proposal Header addiert, um die Länge des
+    /// Proposals zu berechnen.
+    /// Die Proposallänge wird danach mit der Länge des Security Asscociation Payload Headers addiert.
+    /// Die Gesamtlänge des IkeV2 Pakets aus der Länge des Security Association Paylaods und des Header Payloads addiert
     pub fn calculate_length_v2(&mut self) {
         let mut length = U16::from(0);
         for encr in &mut self.encryption_transforms {
@@ -215,7 +226,8 @@ impl IkeV2 {
             + U32::from(self.nonce_payload.length);
         println!("Packet length is {:?}", self.header.length);
     }
-
+    ///Die Bestandteile des IkeV2 Pakets werden in einem leeren Vektor gepusht, sie werden in
+    /// bytes umgewandelt
     pub fn convert_to_bytes_v2(&mut self) -> Vec<u8> {
         let mut bytes_v2 = vec![];
         bytes_v2.extend_from_slice(self.header.as_bytes());
