@@ -178,6 +178,7 @@ impl IkeV2 {
         self.key_exchange_data = key_exchange_data;
     }
     ///In dieser Funktion wird die Nonce erstellt
+    /// es werden 174 randomisierte Bytes in einem Vektor gesammelt
     pub fn generate_nonce_data(&mut self) {
         let nonce_data: Vec<u8> = (0..174).map(|_| random::<u8>()).collect();
         println!("Nonce: {:?}", nonce_data);
@@ -499,8 +500,9 @@ pub struct TransformAttributeV2 {
     ///Attribut für die Schlüssellänge
     pub attribute: AttributeV2,
 }
-///festlegen der Länge der Transformation
+
 impl TransformAttributeV2 {
+    ///festlegen der Länge der Transformation
     pub fn calculate_length(&mut self) {
         self.length = U16::from(4 + 8);
     }
@@ -516,9 +518,11 @@ pub struct AttributeV2 {
     pub attribute_value: U16,
 }
 
+///Attribut Typ für die Schlüssellänge
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(u8)]
 pub enum AttributeType {
+    ///Schlüssellänge
     KeyLength,
 }
 

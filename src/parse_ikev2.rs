@@ -1,3 +1,4 @@
+use zerocopy::network_endian::U128;
 use zerocopy::network_endian::U16;
 use zerocopy::network_endian::U32;
 use zerocopy::network_endian::U64;
@@ -5,7 +6,10 @@ use zerocopy::AsBytes;
 use zerocopy::FromBytes;
 use zerocopy::FromZeroes;
 
+use crate::ikev2::ProtocolId;
+
 #[derive(Debug, Clone, Copy, FromBytes, FromZeroes)]
+#[repr(packed)]
 pub struct ResponsePacketV2 {
     pub header: ResponseHeaderV2,
     pub sa_payload_v2: ResponseSecurityAssociationV2,
@@ -42,7 +46,7 @@ pub struct ResponseHeaderV2 {
     pub version: u8,
     pub exchange_type: u8,
     pub flag: u8,
-    pub message_id: U32,
+    pub message_id: u32,
     pub length: U32,
 }
 
@@ -123,13 +127,13 @@ pub struct ResponseNoncePayloadV2 {
 #[repr(packed)]
 pub struct ResponseCertRequestV2 {
     ///nächster Payload
-    next_payload: u8,
+    pub next_payload: u8,
     ///reserviertes Feld
-    reserved: u8,
+    pub reserved: u8,
     ///Payload Länge
-    length: U16,
+    pub length: U16,
     ///Typ des Zertifikates
-    cert_encoding: u8,
+    pub cert_encoding: u8,
 }
 
 ///Notify Payload (RFC 7296 Seite 100)

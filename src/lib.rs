@@ -48,7 +48,7 @@ pub async fn scan() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
     let remote_addr = "192.168.122.68:500".parse::<SocketAddr>().unwrap();
     socket.connect(remote_addr).await?;
-
+    /*
     //sending IKE Version 1 packet
     let transforms = IkeV1::build_transforms();
     for chunk in transforms.chunks(255) {
@@ -91,6 +91,7 @@ pub async fn scan() -> io::Result<()> {
         socket.send(&bytes).await.expect("Couldn't send packet");
 
         //println!("Sende Wrapper Paket an {:?}: {:?} bytes", remote_addr, send_ike_v1);
+        println!("Sende paket");
 
         let mut buf = [0u8; 112];
         socket
@@ -102,10 +103,13 @@ pub async fn scan() -> io::Result<()> {
 
         //parse Ike Response
         let ike_response = ResponsePacket::read_from_prefix(byte_slice).expect("Slice too short");
+        println!("Paket: {:?}", ike_response);
         ike_response.parse_response();
-        let seconds = time::Duration::from_millis(1360);
+        //let seconds = time::Duration::from_millis(1360);
+        let seconds = time::Duration::from_secs(90);
         tokio::time::sleep(seconds).await;
-    }
+    }*/
+
     //sending IKE Version 2 Packet
     let transforms_v2 = IkeV2::build_transforms_v2();
     for encryption_chunk in transforms_v2.0.chunks(63) {
@@ -170,14 +174,17 @@ pub async fn scan() -> io::Result<()> {
                     let bytes_v2 = ike_v2.convert_to_bytes_v2();
                     socket.send(&bytes_v2).await.expect("Couldn't send packet");
 
-                    let mut buf_v2 = [0u8; 112];
+                    let mut buf_v2 = [0u8; 285];
                     socket
                         .recv_from(&mut buf_v2)
                         .await
                         .expect("couldn't read buffer");
                     let byte_slice_v2 = buf_v2.as_slice();
                     let ike_v2_response = ResponsePacketV2::parse_ike_v2(byte_slice_v2).unwrap();
-                    if ike_v2_response.header.next_payload == 41 {}
+
+                    println!("Found Transforms: Encryption Algorthm: {:?}, Prf-Funktion: {:?}, Integrity Algorithm:{:?}, Diffie-Hellamn-Gruppe{:?}"
+                             ,ike_v2_response.encryption_transform.transform_id, ike_v2_response.prf_transform.transform_id, ike_v2_response.integrity_algorithm_transform.transform_id,
+                             ike_v2_response.diffie_transform.transform_id);
                 }
             }
         }
