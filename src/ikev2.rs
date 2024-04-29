@@ -1,13 +1,9 @@
-use openssl::bn::BigNumRef;
-use openssl::dh;
+//! # Bike-Scan
+//! das folgende Modul erstellt ein Paket für Ike Version 2
+//! Es werden die Structs für den Aufbau definiert und erläutert
+
 use openssl::dh::Dh;
-use openssl::dh::DhRef;
-use openssl::pkey::PKey;
-use rand::distributions::Alphanumeric;
 use rand::random;
-use rand::thread_rng;
-use rand::Rng;
-use zerocopy::network_endian::U128;
 use zerocopy::network_endian::U16;
 use zerocopy::network_endian::U32;
 use zerocopy::network_endian::U64;
@@ -190,7 +186,7 @@ impl IkeV2 {
     /// Die Attributlänge (length) wird dann mit dem Proposal Header addiert, um die Länge des
     /// Proposals zu berechnen.
     /// Die Proposallänge wird danach mit der Länge des Security Asscociation Payload Headers addiert.
-    /// Die Gesamtlänge des IkeV2 Pakets aus der Länge des Security Association Paylaods und des Header Payloads addiert
+    /// Die Gesamtlänge des IkeV2 Pakets aus der Länge des Security Association Paylaods und des Header Payloads addiert.
     pub fn calculate_length_v2(&mut self) {
         let mut length = U16::from(0);
         for encr in &mut self.encryption_transforms {
@@ -297,6 +293,7 @@ pub enum PayloadTypeV2 {
     Configuration,
 }
 
+///Zuweisen der nummerischen Werte für die Paylaods
 impl From<PayloadTypeV2> for u8 {
     fn from(value: PayloadTypeV2) -> Self {
         match value {
@@ -538,11 +535,14 @@ impl From<AttributeType> for U16 {
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(u8)]
 pub enum AttributeValue {
+    ///128 Bit
     Bit128,
+    ///192 Bit
     Bit192,
+    ///256 Bit
     Bit256,
 }
-
+///Vergeben der Werte für die Schlüssellänge
 impl From<AttributeValue> for U16 {
     fn from(value: AttributeValue) -> Self {
         Self::new(match value {
@@ -569,6 +569,7 @@ pub enum TransformTypeValues {
     ExtendedSequenceNumbers,
 }
 
+///Festlegen der nummerischen Werte für Transformationstypen
 impl From<TransformTypeValues> for u8 {
     fn from(value: TransformTypeValues) -> Self {
         match value {
