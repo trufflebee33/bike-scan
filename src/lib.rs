@@ -39,11 +39,10 @@ pub mod ikev2;
 pub mod parse_ike;
 pub mod parse_ikev2;
 
-///Diese Funktion generiert die Ike Pakete und sendet diese an der Zielserver.
-/// Es wird zuerst das IkeV1 Paket gesendet.
+///Diese Funktion generiert das IkeV1 Paket und sendet diese an der Zielserver.
 /// Wenn keine Transformationen gefunden werden,
-/// wird das IkeV2 Paket an den Server gesendet.
-/// Die Antworten des Servers werden für IkeV1 und IkeV2 verarbeitet.
+/// wird das IkeV2 Paket mit der Funktion scan_v2 an den Server gesendet.
+/// Die Antworten des Servers werden für IkeV1 verarbeitet.
 pub async fn scan() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
     let remote_addr = "<IP>:<Port>".parse::<SocketAddr>().unwrap();
@@ -103,7 +102,15 @@ pub async fn scan() -> io::Result<()> {
         let seconds = time::Duration::from_secs(60);
         tokio::time::sleep(seconds).await;
     }
+    Ok(())
+}
 
+///Es wird das Paket für Ikev2 generiert und an den Server gesendet.
+/// Die Antwort des Servers wird verarbeitet und in der Konsole ausgegeben
+pub async fn send_v2() -> io::Result<()> {
+    let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
+    let remote_addr = "<IP>:<Port>".parse::<SocketAddr>().unwrap();
+    socket.connect(remote_addr).await?;
     //sending IKE Version 2 Packet
     let transforms_v2 = IkeV2::build_transforms_v2();
     for encryption_chunk in transforms_v2.0.chunks(63) {
@@ -189,6 +196,5 @@ pub async fn scan() -> io::Result<()> {
             }
         }
     }
-
     Ok(())
 }
