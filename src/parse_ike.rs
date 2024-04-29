@@ -64,7 +64,6 @@ impl ResponsePacket {
             && diffie_hellman.get() > 0
             && authentication_method.get() > 0
         {
-            //todo(check ike version bevor die attribute in vektor gepusht werden)
             valid_encryption_algorithm.push(encryption_algorithm.get());
             valid_hash_type.push(hash_type.get());
             valid_diffie_hellman_group.push(diffie_hellman.get());
@@ -118,7 +117,7 @@ pub struct ResponseHeader {
     ///Security Parameter Index des Initiators
     pub initiator_spi: U64,
     ///Security Parameter Index des Responder
-    /// bekommt den Wert null
+    /// bekommt den Wert 0
     pub responder_spi: u64,
     ///der nächste Payload (häufig Security Association Payload)
     pub next_payload: u8,
@@ -128,7 +127,7 @@ pub struct ResponseHeader {
     pub exchange_type: u8,
     ///die Flags
     /// sind erst in der zweiten Phase notwendig
-    /// und können den Wert null bekommen
+    /// und können den Wert 0 bekommen
     pub flag: u8,
     ///erst in Phase zwei notwendig; muss den Wert null haben
     pub message_id: u32,
@@ -182,6 +181,8 @@ pub struct ResponseTransformWrapped {
     pub transform_payload: ResponseTransformPayload,
     ///Verschlüsselungsalgorithmus
     pub encryption_attribute: ResponseAttribute,
+    ///Attribut fuer die Schlüssellänge
+    pub key_length: ResponseAttribute,
     ///Hash Algorithmus
     pub hash_attribute: ResponseAttribute,
     ///Diffie-Hellman Gruppe
@@ -211,7 +212,7 @@ pub struct ResponseTransformPayload {
     ///Nummer der Transformation
     /// fängt bei eins an
     pub transform_number: u8,
-    ///todo
+    ///legt das Protokoll fest, 1 für IPsec
     pub transform_id: u8,
     ///zweites reserviertes Feld
     pub reserved2: U16,
@@ -254,7 +255,7 @@ pub struct RespondNotify {
     pub length: U16,
     ///Domain of Interpretation
     pub doi: U64,
-    ///Protokoll ID todo: welche ist ike?
+    ///Protokoll ID, Wert 1 für Ike
     pub protocol_id: u8,
     ///Größe des Security Parameter Indexes
     pub spi_size: u8,
