@@ -195,14 +195,21 @@ pub enum PayloadTypeV1 {
     Transform,
     ///Key-Exchange Payload
     KeyExchange,
+    ///Identifizierungs-Payload
     Identification,
+    ///Certificate Payload
     Certificate,
+    ///Certificate Request Payload
     CertificateRequest,
+    ///Hash-Payload
     Hash,
+    ///Signatur Payload
     Signature,
     ///Nonce Payload
     Nonce,
+    ///Notification Payload
     Notification,
+    ///Hersteller ID Payload
     VendorID,
 }
 
@@ -263,6 +270,7 @@ pub enum ExchangeType {
     NewGroupMode,
 }
 
+///Zuweisen der Werte für den Austauschtyp
 impl From<ExchangeType> for u8 {
     fn from(value: ExchangeType) -> Self {
         match value {
@@ -283,224 +291,6 @@ impl ExchangeType {
             5 => Some(ExchangeType::Informational),
             32 => Some(ExchangeType::QuickMode),
             33 => Some(ExchangeType::NewGroupMode),
-            _ => None,
-        }
-    }
-}
-
-///Verschlüsselungsalgorithmen nach IANA
-#[allow(missing_docs)]
-//das sind die festgelegten Namen nach IANA
-#[derive(Debug, Clone, AsBytes)]
-#[repr(u8)]
-pub enum EncryptionAlgorithmV1 {
-    DES,
-    IDEA,
-    Blowfish,
-    Rc5,
-    TrippleDES,
-    Cast,
-    AesCbc,
-    Camellia,
-}
-
-impl From<EncryptionAlgorithmV1> for U16 {
-    fn from(value: EncryptionAlgorithmV1) -> Self {
-        Self::new(match value {
-            EncryptionAlgorithmV1::DES => 1,
-            EncryptionAlgorithmV1::IDEA => 2,
-            EncryptionAlgorithmV1::Blowfish => 3,
-            EncryptionAlgorithmV1::Rc5 => 4,
-            EncryptionAlgorithmV1::TrippleDES => 5,
-            EncryptionAlgorithmV1::Cast => 6,
-            EncryptionAlgorithmV1::AesCbc => 7,
-            EncryptionAlgorithmV1::Camellia => 8,
-        })
-    }
-}
-
-impl EncryptionAlgorithmV1 {
-    fn try_from_u8(value: u8) -> Option<Self> {
-        match value {
-            1 => Some(EncryptionAlgorithmV1::DES),
-            2 => Some(EncryptionAlgorithmV1::IDEA),
-            3 => Some(EncryptionAlgorithmV1::Blowfish),
-            4 => Some(EncryptionAlgorithmV1::Rc5),
-            5 => Some(EncryptionAlgorithmV1::TrippleDES),
-            6 => Some(EncryptionAlgorithmV1::Cast),
-            7 => Some(EncryptionAlgorithmV1::AesCbc),
-            8 => Some(EncryptionAlgorithmV1::Camellia),
-            _ => None,
-        }
-    }
-}
-///Hash-Typen
-#[allow(missing_docs)]
-//Namen genau von IANA übernommen
-#[derive(Debug, Clone, AsBytes)]
-#[repr(u8)]
-pub enum HashType {
-    MD5,
-    SHA1,
-    TIGER,
-    AES128XCDC,
-    SHA2_256,
-    SHA2_384,
-    SHA2_512,
-    AES128CMAC,
-    STREEBOG512,
-}
-
-impl From<HashType> for U16 {
-    fn from(value: HashType) -> Self {
-        Self::new(match value {
-            HashType::MD5 => 1,
-            HashType::SHA1 => 2,
-            HashType::TIGER => 3,
-            HashType::AES128XCDC => 4,
-            HashType::SHA2_256 => 5,
-            HashType::SHA2_384 => 6,
-            HashType::SHA2_512 => 7,
-            HashType::AES128CMAC => 8,
-            HashType::STREEBOG512 => 9,
-        })
-    }
-}
-
-impl HashType {
-    fn try_from_u8(value: u8) -> Option<Self> {
-        match value {
-            1 => Some(HashType::MD5),
-            2 => Some(HashType::SHA1),
-            3 => Some(HashType::TIGER),
-            4 => Some(HashType::AES128XCDC),
-            5 => Some(HashType::SHA2_256),
-            6 => Some(HashType::SHA2_384),
-            7 => Some(HashType::SHA2_512),
-            8 => Some(HashType::AES128CMAC),
-            9 => Some(HashType::STREEBOG512),
-            _ => None,
-        }
-    }
-}
-
-///Authentication Method
-#[derive(Debug, Clone, AsBytes)]
-#[repr(u8)]
-pub enum AuthenticationMethod {
-    PreSharedKey,
-    DssSignatures,
-    RsaSignatures,
-    EncryptionWithRsa,
-    RevisedEncryptionWithRsa,
-}
-
-impl From<AuthenticationMethod> for U16 {
-    fn from(value: AuthenticationMethod) -> Self {
-        Self::new(match value {
-            AuthenticationMethod::PreSharedKey => 1,
-            AuthenticationMethod::DssSignatures => 2,
-            AuthenticationMethod::RsaSignatures => 3,
-            AuthenticationMethod::EncryptionWithRsa => 4,
-            AuthenticationMethod::RevisedEncryptionWithRsa => 5,
-        })
-    }
-}
-
-impl AuthenticationMethod {
-    fn try_from_u8(value: u8) -> Option<Self> {
-        match value {
-            1 => Some(AuthenticationMethod::PreSharedKey),
-            2 => Some(AuthenticationMethod::DssSignatures),
-            3 => Some(AuthenticationMethod::RsaSignatures),
-            4 => Some(AuthenticationMethod::EncryptionWithRsa),
-            5 => Some(AuthenticationMethod::RevisedEncryptionWithRsa),
-            _ => None,
-        }
-    }
-}
-
-///Diffie-Hellman Gruppen vollständig
-#[allow(missing_docs)]
-//genau von IANA übernommen
-#[derive(Debug, Clone, AsBytes)]
-#[repr(u8)]
-pub enum DhGroup {
-    MODP768bit,
-    MODP1024bit,
-    EC2N155,
-    EC2N185,
-    MODP1536bit,
-    MODP2048bit,
-    MODP3071bit,
-    MODP4096bit,
-    MODP6144bit,
-    MODP8192bit,
-    RandomECPGroup256bit,
-    RandomECPGroup384bit,
-    RandomECPGroup521bit,
-    MODP2048With256bitPrimeOrder,
-    BrainpoolP256r1,
-    BrainpoolP384r1,
-    BrainpoolP512r1,
-    Curve25519,
-    Curve448,
-    GOST3410_2012_256,
-    GOST3410_2012_512,
-}
-
-impl From<DhGroup> for U16 {
-    fn from(value: DhGroup) -> Self {
-        Self::new(match value {
-            DhGroup::MODP768bit => 1,
-            DhGroup::MODP1024bit => 2,
-            DhGroup::EC2N155 => 3,
-            DhGroup::EC2N185 => 4,
-            DhGroup::MODP1536bit => 5,
-            DhGroup::MODP2048bit => 14,
-            DhGroup::MODP3071bit => 15,
-            DhGroup::MODP4096bit => 16,
-            DhGroup::MODP6144bit => 17,
-            DhGroup::MODP8192bit => 18,
-            DhGroup::RandomECPGroup256bit => 19,
-            DhGroup::RandomECPGroup384bit => 20,
-            DhGroup::RandomECPGroup521bit => 21,
-            DhGroup::MODP2048With256bitPrimeOrder => 24,
-            DhGroup::BrainpoolP256r1 => 28,
-            DhGroup::BrainpoolP384r1 => 29,
-            DhGroup::BrainpoolP512r1 => 30,
-            DhGroup::Curve25519 => 31,
-            DhGroup::Curve448 => 32,
-            DhGroup::GOST3410_2012_256 => 33,
-            DhGroup::GOST3410_2012_512 => 34,
-        })
-    }
-}
-
-impl DhGroup {
-    fn try_from_u8(value: u8) -> Option<Self> {
-        match value {
-            1 => Some(DhGroup::MODP768bit),
-            2 => Some(DhGroup::MODP1024bit),
-            3 => Some(DhGroup::EC2N155),
-            4 => Some(DhGroup::EC2N185),
-            5 => Some(DhGroup::MODP1536bit),
-            14 => Some(DhGroup::MODP2048bit),
-            15 => Some(DhGroup::MODP3071bit),
-            16 => Some(DhGroup::MODP4096bit),
-            17 => Some(DhGroup::MODP6144bit),
-            18 => Some(DhGroup::MODP8192bit),
-            19 => Some(DhGroup::RandomECPGroup256bit),
-            20 => Some(DhGroup::RandomECPGroup384bit),
-            21 => Some(DhGroup::RandomECPGroup521bit),
-            24 => Some(DhGroup::MODP2048With256bitPrimeOrder),
-            28 => Some(DhGroup::BrainpoolP256r1),
-            29 => Some(DhGroup::BrainpoolP384r1),
-            30 => Some(DhGroup::BrainpoolP512r1),
-            31 => Some(DhGroup::Curve25519),
-            32 => Some(DhGroup::Curve448),
-            33 => Some(DhGroup::GOST3410_2012_256),
-            34 => Some(DhGroup::GOST3410_2012_512),
             _ => None,
         }
     }
@@ -528,14 +318,16 @@ pub struct SecurityAssociationV1 {
 #[derive(Debug, Copy, Clone, AsBytes)]
 #[repr(u8)]
 pub enum SaSituation {
-    //todo
+    ///Identifizierung der Security Association über den Identitäts-Paylod
     IdentityOnly,
-    ///Geheimhaltung
+    ///Security Association wird in Umgebung mit Geheimhaltung übertragen
     Secrecy,
-    ///Integrität
+    ///Security Association wird in einer Umgebung,
+    /// die eine gelabelte Integrität erfordert, übertragen
     Integrity,
 }
 
+///Zuweisen der Werte für die Situation
 impl From<SaSituation> for U32 {
     fn from(value: SaSituation) -> Self {
         match value {
