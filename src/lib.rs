@@ -6,14 +6,10 @@
 
 use std::io;
 use std::net::SocketAddr;
-use std::thread::sleep;
 use std::time;
 
-use rand::distributions::Alphanumeric;
-use rand::random;
 use rand::Rng;
 use tokio::net::UdpSocket;
-use zerocopy::network_endian::U128;
 use zerocopy::network_endian::U16;
 use zerocopy::network_endian::U32;
 use zerocopy::network_endian::U64;
@@ -35,7 +31,6 @@ use crate::ikev2::PayloadTypeV2;
 use crate::ikev2::Proposal;
 use crate::ikev2::ProtocolId;
 use crate::ikev2::SecurityAssociationV2;
-use crate::ikev2::TransformTypeValues::DiffieHellmanGroup;
 use crate::parse_ike::ResponsePacket;
 use crate::parse_ikev2::ResponsePacketV2;
 
@@ -44,11 +39,15 @@ pub mod ikev2;
 pub mod parse_ike;
 pub mod parse_ikev2;
 
+///Diese Funktion generiert die Ike Pakete und sendet diese an der Zielserver.
+/// Es wird zuerst das IkeV1 Paket gesendet.
+/// Wenn keine Transformationen gefunden werden,
+/// wird das IkeV2 Paket an den Server gesendet.
+/// Die Antworten des Servers werden für IkeV1 und IkeV2 verarbeitet.
 pub async fn scan() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
-    let remote_addr = "192.168.122.68:500".parse::<SocketAddr>().unwrap();
+    let remote_addr = "192.168.33.10:500".parse::<SocketAddr>().unwrap();
     socket.connect(remote_addr).await?;
-    /*
     //sending IKE Version 1 packet
     let transforms = IkeV1::build_transforms();
     for chunk in transforms.chunks(255) {
@@ -90,9 +89,6 @@ pub async fn scan() -> io::Result<()> {
 
         socket.send(&bytes).await.expect("Couldn't send packet");
 
-        //println!("Sende Wrapper Paket an {:?}: {:?} bytes", remote_addr, send_ike_v1);
-        println!("Sende paket");
-
         let mut buf = [0u8; 112];
         socket
             .recv_from(&mut buf)
@@ -103,12 +99,10 @@ pub async fn scan() -> io::Result<()> {
 
         //parse Ike Response
         let ike_response = ResponsePacket::read_from_prefix(byte_slice).expect("Slice too short");
-        println!("Paket: {:?}", ike_response);
         ike_response.parse_response();
-        //let seconds = time::Duration::from_millis(1360);
-        let seconds = time::Duration::from_secs(90);
+        let seconds = time::Duration::from_secs(60);
         tokio::time::sleep(seconds).await;
-    }*/
+    }
 
     //sending IKE Version 2 Packet
     let transforms_v2 = IkeV2::build_transforms_v2();
@@ -181,8 +175,14 @@ pub async fn scan() -> io::Result<()> {
                         .expect("couldn't read buffer");
                     let byte_slice_v2 = buf_v2.as_slice();
                     let ike_v2_response = ResponsePacketV2::parse_ike_v2(byte_slice_v2).unwrap();
+                    //println!("{:?}", ike_v2_response);
 
-                    println!("Found Transforms: Encryption Algorthm: {:?}, Prf-Funktion: {:?}, Integrity Algorithm:{:?}, Diffie-Hellamn-Gruppe{:?}"
+                    println!(
+                        "Ike Version is {:?}, ExchangeType is {:?}",
+                        ike_v2_response.header.version, ike_v2_response.header.exchange_type
+                    );
+
+                    println!("Found Transforms: Encryption Algorthm: {:?}, Prf-Funktion: {:?}, Integrity Algorithm: {:?}, Diffie-Hellamn-Gruppe: {:?}"
                              ,ike_v2_response.encryption_transform.transform_id, ike_v2_response.prf_transform.transform_id, ike_v2_response.integrity_algorithm_transform.transform_id,
                              ike_v2_response.diffie_transform.transform_id);
                 }
