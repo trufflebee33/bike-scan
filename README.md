@@ -26,6 +26,6 @@ cargo install --path .
 
 ## HOW TO USE
 1. Build a main function to use the scan method
-2. If you want to run the version for ikeV1 use function scan. If you want to run the version for ikeV2 use function scan_v2
+2. If you want to run the version for IkeV1 use function scan. If you want to run the version for IkeV2 use function scan_v2
 3. Insert the ip adress and port of the server you want to scan
 4. Run your main function
