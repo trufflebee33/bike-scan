@@ -274,8 +274,11 @@ pub enum PayloadTypeV2 {
     SecurityAssociation,
     ///Key Exchange Payload
     KeyExchange,
+    ///Identifizierungs Payload Initiator
     IdentificationInitiator,
+    ///Identifizierungs Payload Responder
     IdentificationResponder,
+    ///Zertifikat Payload
     Certificate,
     ///Certificate Request Payload
     CertificateRequest,
@@ -287,10 +290,6 @@ pub enum PayloadTypeV2 {
     Notify,
     ///Hersteller-ID Payload
     VendorID,
-    TrafficSelectorInitiator,
-    TrafficSelectorResponder,
-    Encrypted,
-    Configuration,
 }
 
 ///Zuweisen der nummerischen Werte für die Paylaods
@@ -308,10 +307,6 @@ impl From<PayloadTypeV2> for u8 {
             PayloadTypeV2::Nonce => 40,
             PayloadTypeV2::Notify => 41,
             PayloadTypeV2::VendorID => 43,
-            PayloadTypeV2::TrafficSelectorInitiator => 44,
-            PayloadTypeV2::TrafficSelectorResponder => 45,
-            PayloadTypeV2::Encrypted => 46,
-            PayloadTypeV2::Configuration => 47,
         }
     }
 }
@@ -330,10 +325,6 @@ impl PayloadTypeV2 {
             40 => Some(PayloadTypeV2::Nonce),
             41 => Some(PayloadTypeV2::Notify),
             43 => Some(PayloadTypeV2::VendorID),
-            44 => Some(PayloadTypeV2::TrafficSelectorInitiator),
-            45 => Some(PayloadTypeV2::TrafficSelectorResponder),
-            46 => Some(PayloadTypeV2::Encrypted),
-            47 => Some(PayloadTypeV2::Configuration),
             _ => None,
         }
     }
