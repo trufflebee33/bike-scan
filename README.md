@@ -2,8 +2,8 @@
 
 ## Purpose of this project
 The purpose of this project is to scan ipsec servers reliably.
-Bike-Scan finds all transformations of a server if it is configured with the ikev1 protocol.
-In the case of a configuration with the Ikev2 protocol, the first transformation in the configured list is found but only if the diffie-hellman group of the key-exchange payload is 1024 bit modp.
+Bike-Scan finds all transformations of a server if it is configured with the IkeV1 protocol.
+In the case of a configuration with the IkeV2 protocol, the first transformation in the configured list is found but only if the Diffie-Hellman group of the Key Exchange Payload is 1024-Bit modp.
 Bike-Scan was developed as part of a bachelor thesis in collaboration with Trufflepig IT-Forensics GmbH.
 
 ## Tutorial (Linux)
