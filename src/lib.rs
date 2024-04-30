@@ -1,6 +1,11 @@
 //! # bike-scan
-//!
-//! TODO more informations
+//! Bke-Scan wird zum Scannen von IPsec Servern verwendet.
+//! Die Funktion scan() ist für IkeV1 zuständig,
+//! die Funktion scan_v2() ist für IkeV2 zuständig.
+//! Die Funktionen verwenden Structs und Implementationen
+//! der jeweigen Module.
+//! Module für die scan()-Funktion: ike.rs, parse_ike.rs
+//! Module für die scan_v2()-Funktion: ikev2.rs, parse_ikev2.rs
 
 #![warn(missing_docs, clippy::expect_used, clippy::unwrap_used)]
 
@@ -107,7 +112,7 @@ pub async fn scan() -> io::Result<()> {
 
 ///Es wird das Paket für Ikev2 generiert und an den Server gesendet.
 /// Die Antwort des Servers wird verarbeitet und in der Konsole ausgegeben
-pub async fn send_v2() -> io::Result<()> {
+pub async fn scan_v2() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
     let remote_addr = "<IP>:<Port>".parse::<SocketAddr>().unwrap();
     socket.connect(remote_addr).await?;
