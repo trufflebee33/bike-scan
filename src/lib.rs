@@ -36,6 +36,7 @@ use crate::ikev2::PayloadTypeV2;
 use crate::ikev2::Proposal;
 use crate::ikev2::ProtocolId;
 use crate::ikev2::SecurityAssociationV2;
+use crate::ikev2::TestIkeVersion;
 use crate::parse_ike::ResponsePacket;
 use crate::parse_ikev2::ResponsePacketV2;
 
@@ -50,7 +51,7 @@ pub mod parse_ikev2;
 /// Die Antworten des Servers werden für IkeV1 verarbeitet.
 pub async fn scan() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
-    let remote_addr = "<IP>:<Port>".parse::<SocketAddr>().unwrap();
+    let remote_addr = "192.168.33.10:500".parse::<SocketAddr>().unwrap();
     socket.connect(remote_addr).await?;
     //sending IKE Version 1 packet
     let transforms = IkeV1::build_transforms();
@@ -114,8 +115,24 @@ pub async fn scan() -> io::Result<()> {
 /// Die Antwort des Servers wird verarbeitet und in der Konsole ausgegeben
 pub async fn scan_v2() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
-    let remote_addr = "<IP>:<Port>".parse::<SocketAddr>().unwrap();
+    let remote_addr = "192.168.33.10:500".parse::<SocketAddr>().unwrap();
     socket.connect(remote_addr).await?;
+
+    //test paket
+    let check_version = TestIkeVersion::build_test_packet();
+    println!("{:?}", check_version);
+    socket
+        .send(&check_version)
+        .await
+        .expect("Couldn't send packet");
+
+    let mut buf_v2 = [0u8; 285];
+    socket
+        .recv_from(&mut buf_v2)
+        .await
+        .expect("couldn't read buffer");
+
+    /*
     //sending IKE Version 2 Packet
     let transforms_v2 = IkeV2::build_transforms_v2();
     for encryption_chunk in transforms_v2.0.chunks(63) {
@@ -156,7 +173,7 @@ pub async fn scan_v2() -> io::Result<()> {
                             next_payload: u8::from(PayloadTypeV2::Nonce),
                             reserved: 0,
                             length: Default::default(),
-                            diffie_hellman_group: U16::from(2),
+                            diffie_hellman_group: U16::from(1),
                             reserved2: Default::default(),
                         },
                         key_exchange_data: vec![],
@@ -178,7 +195,10 @@ pub async fn scan_v2() -> io::Result<()> {
                     ike_v2.calculate_length_v2();
 
                     let bytes_v2 = ike_v2.convert_to_bytes_v2();
-                    socket.send(&bytes_v2).await.expect("Couldn't send packet");
+                    socket
+                        .send(&bytes_v2)
+                        .await
+                        .expect("Couldn't send packet");
 
                     let mut buf_v2 = [0u8; 285];
                     socket
@@ -200,6 +220,6 @@ pub async fn scan_v2() -> io::Result<()> {
                 }
             }
         }
-    }
+    }*/
     Ok(())
 }
