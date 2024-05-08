@@ -166,42 +166,42 @@ impl IkeV2 {
     /// Aus den Schlüsseln wird er Public Key extrahiert.
     /// Aus dem Public Key wird die Primzahl extrahiert, diese bildet die Key-Exchange Daten
     pub fn generate_key_exchange_data(&mut self) {
-        /*let prime_len = 768;
-        let diffie_hellman = Dh::generate_params(prime_len, 2).unwrap();
-        let private_key = diffie_hellman.generate_key().unwrap();
-        println!("Primes: {}", private_key.prime_p().num_bytes());
-        let public_key = private_key.public_key();
-
-        let key_exchange_data = public_key
-            .to_vec_padded(private_key.prime_p().num_bytes())
-            .unwrap();*/
-
-        if self.key_exchange.diffie_hellman_group == U16::from(1) {
-            let key_exchange_data = fs::read("key_exchange_data_768.txt");
-            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
-        } else if self.key_exchange.diffie_hellman_group == U16::from(2) {
-            let key_exchange_data = fs::read("key_exchange_data_1024.txt");
-            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
-        } else if self.key_exchange.diffie_hellman_group == U16::from(5) {
-            let key_exchange_data = fs::read("key_exchange_data_1536.txt");
-            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
-        } else if self.key_exchange.diffie_hellman_group == U16::from(14) {
-            let key_exchange_data = fs::read("key_exchange_data_2048.txt");
-            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
-        } else if self.key_exchange.diffie_hellman_group == U16::from(15) {
-            let key_exchange_data = fs::read("key_exchange_data_3072.txt");
-            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
-        } else if self.key_exchange.diffie_hellman_group == U16::from(16) {
-            let key_exchange_data = fs::read("key_exchange_data_4096.txt");
-            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
-        } else if self.key_exchange.diffie_hellman_group == U16::from(17) {
-            let key_exchange_data = fs::read("key_exchange_data_6144.txt");
-            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
-        } else if self.key_exchange.diffie_hellman_group == U16::from(18) {
-            let key_exchange_data = fs::read("key_exchange_data_8192.txt");
-            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
-        } else {
-            println!("No supported Diffie-Hellman Group")
+        match self.key_exchange.diffie_hellman_group.get() {
+            1 => {
+                let key_exchange_data = fs::read("key_exchange_data_768.txt");
+                self.key_exchange_data = key_exchange_data.expect("couldnt read file")
+            }
+            2 => {
+                let key_exchange_data = fs::read("key_exchange_data_1024.txt");
+                self.key_exchange_data = key_exchange_data.expect("couldnt read file")
+            }
+            3 => {
+                let key_exchange_data = fs::read("key_exchange_data_1536.txt");
+                self.key_exchange_data = key_exchange_data.expect("couldnt read file")
+            }
+            4 => {
+                let key_exchange_data = fs::read("key_exchange_data_2048.txt");
+                self.key_exchange_data = key_exchange_data.expect("couldnt read file")
+            }
+            5 => {
+                let key_exchange_data = fs::read("key_exchange_data_3072.txt");
+                self.key_exchange_data = key_exchange_data.expect("couldnt read file")
+            }
+            6 => {
+                let key_exchange_data = fs::read("key_exchange_data_4096.txt");
+                self.key_exchange_data = key_exchange_data.expect("couldnt read file")
+            }
+            7 => {
+                let key_exchange_data = fs::read("key_exchange_data_6144.txt");
+                self.key_exchange_data = key_exchange_data.expect("couldnt read file")
+            }
+            8 => {
+                let key_exchange_data = fs::read("key_exchange_data_8192.txt");
+                self.key_exchange_data = key_exchange_data.expect("couldnt read file");
+            }
+            _ => {
+                println!("No supported Diffie-Hellman Group")
+            }
         }
     }
     ///In dieser Funktion wird die Nonce erstellt
