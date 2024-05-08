@@ -2,15 +2,22 @@
 //! das folgende Modul erstellt ein Paket für Ike Version 2
 //! Es werden die Structs für den Aufbau definiert und erläutert
 
+use std::fs;
+
 use openssl::dh::Dh;
 use rand::random;
 use rand::Rng;
+use tokio::fs::File;
 use zerocopy::network_endian::U16;
 use zerocopy::network_endian::U32;
 use zerocopy::network_endian::U64;
 use zerocopy::AsBytes;
 use zerocopy::FromBytes;
 use zerocopy::FromZeroes;
+
+pub mod key_exchange_data;
+pub mod testversion;
+
 //done(header, sa payload, proposal payload, transformationen ggf. key exchange payload)
 //todo: attribute der transforms definieren (dh gruppem, encryption, authentication, hash)
 //todo: wrapper struct fuer ikev2 paket bauen, wrapper fuer transforms mit attributen bauen (rfc)
@@ -159,7 +166,7 @@ impl IkeV2 {
     /// Aus den Schlüsseln wird er Public Key extrahiert.
     /// Aus dem Public Key wird die Primzahl extrahiert, diese bildet die Key-Exchange Daten
     pub fn generate_key_exchange_data(&mut self) {
-        let prime_len = 768;
+        /*let prime_len = 768;
         let diffie_hellman = Dh::generate_params(prime_len, 2).unwrap();
         let private_key = diffie_hellman.generate_key().unwrap();
         println!("Primes: {}", private_key.prime_p().num_bytes());
@@ -167,11 +174,35 @@ impl IkeV2 {
 
         let key_exchange_data = public_key
             .to_vec_padded(private_key.prime_p().num_bytes())
-            .unwrap();
+            .unwrap();*/
 
-        println!("{:?}", key_exchange_data);
-
-        self.key_exchange_data = key_exchange_data;
+        if self.key_exchange.diffie_hellman_group == U16::from(1) {
+            let key_exchange_data = fs::read("key_exchange_data_768.txt");
+            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
+        } else if self.key_exchange.diffie_hellman_group == U16::from(2) {
+            let key_exchange_data = fs::read("key_exchange_data_1024.txt");
+            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
+        } else if self.key_exchange.diffie_hellman_group == U16::from(5) {
+            let key_exchange_data = fs::read("key_exchange_data_1536.txt");
+            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
+        } else if self.key_exchange.diffie_hellman_group == U16::from(14) {
+            let key_exchange_data = fs::read("key_exchange_data_2048.txt");
+            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
+        } else if self.key_exchange.diffie_hellman_group == U16::from(15) {
+            let key_exchange_data = fs::read("key_exchange_data_3072.txt");
+            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
+        } else if self.key_exchange.diffie_hellman_group == U16::from(16) {
+            let key_exchange_data = fs::read("key_exchange_data_4096.txt");
+            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
+        } else if self.key_exchange.diffie_hellman_group == U16::from(17) {
+            let key_exchange_data = fs::read("key_exchange_data_6144.txt");
+            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
+        } else if self.key_exchange.diffie_hellman_group == U16::from(18) {
+            let key_exchange_data = fs::read("key_exchange_data_8192.txt");
+            self.key_exchange_data = key_exchange_data.expect("couldnt read file");
+        } else {
+            println!("No supported Diffie-Hellman Group")
+        }
     }
     ///In dieser Funktion wird die Nonce erstellt
     /// es werden 174 randomisierte Bytes in einem Vektor gesammelt
@@ -239,231 +270,6 @@ impl IkeV2 {
         bytes_v2.extend_from_slice(self.nonce_payload.as_bytes());
         bytes_v2.extend_from_slice(self.nonce_data.as_bytes());
         bytes_v2
-    }
-}
-
-///Test Package to identify ike-version
-#[derive(Debug, Clone)]
-pub struct TestIkeVersion {
-    header: IkeV2Header,
-    sa_payload: SecurityAssociationV2,
-    proposal: Proposal,
-    encryption_transform: TransformAttributeV2,
-    prf_transform: TransformV2,
-    integrity_alg: TransformV2,
-    diffie_hellman_transform: TransformV2,
-    key_exchange_payload: KeyExchangePayloadV2,
-    key_exchange_data: Vec<u8>,
-    nonce_payload: NoncePayloadV2,
-    nonce_data: Vec<u8>,
-}
-
-impl TestIkeVersion {
-    fn build_transforms() -> (
-        Vec<TransformAttributeV2>,
-        Vec<TransformV2>,
-        Vec<TransformV2>,
-        Vec<TransformV2>,
-    ) {
-        let mut transform_vec_encryption: Vec<TransformAttributeV2> = vec![];
-        let mut transform_vec_prf: Vec<TransformV2> = vec![];
-        let mut transform_vec_integrity_algorithm: Vec<TransformV2> = vec![];
-        let mut transform_vec_diffie_group: Vec<TransformV2> = vec![];
-
-        transform_vec_encryption.push(TransformAttributeV2 {
-            next_transform: 3,
-            reserved: 0,
-            length: Default::default(),
-            transform_type: u8::from(TransformTypeValues::EncryptionAlgorithm),
-            reserved2: 0,
-            transform_id: U16::from(1),
-            attribute: AttributeV2 {
-                attribute_type: U16::from(AttributeType::KeyLength),
-                attribute_value: U16::from(0),
-            },
-        });
-
-        transform_vec_prf.push(TransformV2 {
-            next_transform: 3,
-            reserved: 0,
-            length: Default::default(),
-            transform_type: u8::from(TransformTypeValues::PseudoRandomFunction),
-            reserved2: 0,
-            transform_id: U16::from(1),
-        });
-
-        transform_vec_integrity_algorithm.push(TransformV2 {
-            next_transform: 3,
-            reserved: 0,
-            length: Default::default(),
-            transform_type: u8::from(TransformTypeValues::IntegrityAlgorithm),
-            reserved2: 0,
-            transform_id: U16::from(1),
-        });
-
-        transform_vec_diffie_group.push(TransformV2 {
-            next_transform: 0,
-            reserved: 0,
-            length: Default::default(),
-            transform_type: u8::from(TransformTypeValues::DiffieHellmanGroup),
-            reserved2: 0,
-            transform_id: U16::from(1),
-        });
-        (
-            transform_vec_encryption,
-            transform_vec_prf,
-            transform_vec_integrity_algorithm,
-            transform_vec_diffie_group,
-        )
-    }
-    pub fn generate_key_exchange_data(&mut self) {
-        let prime_len = 768;
-        let diffie_hellman = Dh::generate_params(prime_len, 2).unwrap();
-        let private_key = diffie_hellman.generate_key().unwrap();
-        println!("Primes: {}", private_key.prime_p().num_bytes());
-        let public_key = private_key.public_key();
-
-        let key_exchange_data = public_key
-            .to_vec_padded(private_key.prime_p().num_bytes())
-            .unwrap();
-
-        println!("{:?}", key_exchange_data);
-
-        self.key_exchange_data = key_exchange_data;
-    }
-    pub fn generate_nonce_data(&mut self) {
-        let nonce_data: Vec<u8> = (0..174).map(|_| random::<u8>()).collect();
-        println!("Nonce: {:?}", nonce_data);
-        self.nonce_data = nonce_data;
-    }
-    pub fn calculate_length_v2(&mut self) {
-        let mut length = U16::from(0);
-
-        self.encryption_transform.calculate_length();
-        length += self.encryption_transform.length;
-
-        self.prf_transform.calculate_length();
-        length += self.prf_transform.length;
-
-        self.integrity_alg.calculate_length();
-        length += self.integrity_alg.length;
-
-        self.diffie_hellman_transform.calculate_length();
-        length += self.diffie_hellman_transform.length;
-
-        let proposal_length = U16::from(8) + length;
-        self.proposal.length = proposal_length;
-        let sa_length = U16::from(4) + proposal_length;
-        self.sa_payload.sa2_length = sa_length;
-        self.key_exchange_payload.length = U16::from(8 + (self.key_exchange_data.len() as u16));
-        self.nonce_payload.length = U16::from(4 + (self.nonce_data.len() as u16));
-        self.header.length = U32::from(28)
-            + U32::from(sa_length)
-            + U32::from(self.key_exchange_payload.length)
-            + U32::from(self.nonce_payload.length);
-    }
-
-    pub fn convert_to_bytes_v2(&mut self) -> Vec<u8> {
-        let mut bytes_v2 = vec![];
-        bytes_v2.extend_from_slice(self.header.as_bytes());
-        bytes_v2.extend_from_slice(self.sa_payload.as_bytes());
-        bytes_v2.extend_from_slice(self.proposal.as_bytes());
-        bytes_v2.extend_from_slice(self.encryption_transform.as_bytes());
-        bytes_v2.extend_from_slice(self.prf_transform.as_bytes());
-        bytes_v2.extend_from_slice(self.integrity_alg.as_bytes());
-        bytes_v2.extend_from_slice(self.diffie_hellman_transform.as_bytes());
-        bytes_v2.extend_from_slice(self.key_exchange_payload.as_bytes());
-        bytes_v2.extend_from_slice(self.key_exchange_data.as_bytes());
-        bytes_v2.extend_from_slice(self.nonce_payload.as_bytes());
-        bytes_v2.extend_from_slice(self.nonce_data.as_bytes());
-        bytes_v2
-    }
-
-    pub fn build_test_packet() -> Vec<u8> {
-        let initiator_spi_v2: u64 = rand::thread_rng().gen();
-        let mut test_packet = TestIkeVersion {
-            header: IkeV2Header {
-                initiator_spi: U64::from(initiator_spi_v2),
-                responder_spi: Default::default(),
-                next_payload: u8::from(PayloadTypeV2::SecurityAssociation),
-                version: 32,
-                exchange_type: u8::from(ExchangeTypeV2::IkeSaInit),
-                flag: 0,
-                message_id: 0,
-                length: Default::default(),
-            },
-            sa_payload: SecurityAssociationV2 {
-                sa2_next_payload: u8::from(PayloadTypeV2::KeyExchange),
-                critical_bit: 0,
-                sa2_length: Default::default(),
-            },
-            proposal: Proposal {
-                next_proposal: 0,
-                reserved: 0,
-                length: Default::default(),
-                proposal_number: 1,
-                protocol_id: ProtocolId::IKE,
-                spi_size: 0,
-                number_of_transforms: 4,
-            },
-            encryption_transform: TransformAttributeV2 {
-                next_transform: 3,
-                reserved: 0,
-                length: Default::default(),
-                transform_type: u8::from(TransformTypeValues::EncryptionAlgorithm),
-                reserved2: 0,
-                transform_id: U16::from(1),
-                attribute: AttributeV2 {
-                    attribute_type: U16::from(AttributeType::KeyLength),
-                    attribute_value: U16::from(0),
-                },
-            },
-            prf_transform: TransformV2 {
-                next_transform: 3,
-                reserved: 0,
-                length: Default::default(),
-                transform_type: u8::from(TransformTypeValues::PseudoRandomFunction),
-                reserved2: 0,
-                transform_id: U16::from(1),
-            },
-            integrity_alg: TransformV2 {
-                next_transform: 3,
-                reserved: 0,
-                length: Default::default(),
-                transform_type: u8::from(TransformTypeValues::IntegrityAlgorithm),
-                reserved2: 0,
-                transform_id: U16::from(1),
-            },
-            diffie_hellman_transform: TransformV2 {
-                next_transform: 0,
-                reserved: 0,
-                length: Default::default(),
-                transform_type: u8::from(TransformTypeValues::DiffieHellmanGroup),
-                reserved2: 0,
-                transform_id: U16::from(1),
-            },
-            key_exchange_payload: KeyExchangePayloadV2 {
-                next_payload: u8::from(PayloadTypeV2::Nonce),
-                reserved: 0,
-                length: Default::default(),
-                diffie_hellman_group: U16::from(1),
-                reserved2: Default::default(),
-            },
-            key_exchange_data: vec![],
-            nonce_payload: NoncePayloadV2 {
-                next_payload_: 0,
-                reserved: 0,
-                length: Default::default(),
-            },
-            nonce_data: vec![],
-        };
-
-        test_packet.generate_key_exchange_data();
-        test_packet.generate_nonce_data();
-        test_packet.calculate_length_v2();
-        let bytes = test_packet.convert_to_bytes_v2();
-
-        bytes
     }
 }
 
