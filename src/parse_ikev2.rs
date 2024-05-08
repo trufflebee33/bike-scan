@@ -10,6 +10,7 @@ use zerocopy::FromBytes;
 use zerocopy::FromZeroes;
 
 use crate::ikev2::ProtocolId;
+
 ///Wrapper Struct für das Parsen des Ike Version 2 Protokolls
 #[derive(Debug, Clone, Copy, FromBytes, FromZeroes)]
 #[repr(packed)]
@@ -36,6 +37,20 @@ impl ResponsePacketV2 {
     /// Die Länge des Wrapperstruct darf nicht größer als die Länge der
     /// gesendeten Bytes sein.
     pub fn parse_ike_v2(buf: &[u8]) -> Option<Self> {
+        Self::read_from_prefix(buf)
+    }
+}
+
+///Response paket with error message
+#[derive(Debug, Clone, Copy, FromBytes, FromZeroes)]
+#[repr(packed)]
+pub struct NotifyPacket {
+    pub header: ResponseHeaderV2,
+    pub notify_payload: ResponseNotifyPayloadV2,
+}
+
+impl NotifyPacket {
+    pub fn parse_notify(buf: &[u8]) -> Option<Self> {
         Self::read_from_prefix(buf)
     }
 }
@@ -205,4 +220,5 @@ pub struct ResponseNotifyPayloadV2 {
     pub protocol_id: u8,
     ///SPI Größe (0, wenn sich die Nachricht auf die IKE-SA bezieht)
     pub spi_size: u8,
+    pub notify_message_type: U16,
 }
