@@ -21,6 +21,7 @@ use zerocopy::network_endian::U64;
 use zerocopy::AsBytes;
 use zerocopy::FromBytes;
 
+use crate::ike::ExchangeType;
 use crate::ike::IkeV1;
 use crate::ike::IkeV1Header;
 use crate::ike::PayloadTypeV1::NoNextPayload;
@@ -28,6 +29,8 @@ use crate::ike::PayloadTypeV1::SecurityAssociation;
 use crate::ike::ProposalPayload;
 use crate::ike::SecurityAssociationV1;
 use crate::ikev2::testversion::TestIkeVersion;
+use crate::ikev2::AttributeType;
+use crate::ikev2::AttributeV2;
 use crate::ikev2::ExchangeTypeV2;
 use crate::ikev2::IkeV2;
 use crate::ikev2::IkeV2Header;
@@ -37,6 +40,9 @@ use crate::ikev2::PayloadTypeV2;
 use crate::ikev2::Proposal;
 use crate::ikev2::ProtocolId;
 use crate::ikev2::SecurityAssociationV2;
+use crate::ikev2::TransformAttributeV2;
+use crate::ikev2::TransformTypeValues;
+use crate::ikev2::TransformV2;
 use crate::parse_ike::ResponsePacket;
 use crate::parse_ikev2::NotifyPacket;
 use crate::parse_ikev2::ResponsePacketV2;
@@ -117,7 +123,7 @@ pub async fn scan() -> io::Result<()> {
 /// Die Antwort des Servers wird verarbeitet und in der Konsole ausgegeben
 pub async fn scan_v2() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
-    let remote_addr = "192.168.33.10:500".parse::<SocketAddr>().unwrap();
+    let remote_addr = "192.168.122.68:500".parse::<SocketAddr>().unwrap();
     socket.connect(remote_addr).await?;
     //sending IKE Version 2 Packet
     let transforms_v2 = IkeV2::build_transforms_v2();
@@ -219,13 +225,92 @@ pub async fn scan_v2() -> io::Result<()> {
     Ok(())
 }
 
-/*pub async fn test_version() -> io::Result<()> {
-    let version = TestIkeVersion::build_test_packet();
-    println!("{:?}", version);
+pub async fn test_version() -> io::Result<()> {
+    let initiator_spi_v2: u64 = rand::thread_rng().gen();
+    let mut test = TestIkeVersion {
+        header: IkeV2Header {
+            initiator_spi: U64::from(initiator_spi_v2),
+            responder_spi: U64::from(0),
+            next_payload: u8::from(PayloadTypeV2::SecurityAssociation),
+            version: 32,
+            exchange_type: u8::from(ExchangeTypeV2::IkeSaInit),
+            flag: 8,
+            message_id: 0,
+            length: Default::default(),
+        },
+        sa_payload: SecurityAssociationV2 {
+            sa2_next_payload: u8::from(PayloadTypeV2::KeyExchange),
+            critical_bit: 0,
+            sa2_length: Default::default(),
+        },
+        proposal: Proposal {
+            next_proposal: 0,
+            reserved: 0,
+            length: Default::default(),
+            proposal_number: 1,
+            protocol_id: ProtocolId::IKE,
+            spi_size: 0,
+            number_of_transforms: 4,
+        },
+        encryption_transform: TransformAttributeV2 {
+            next_transform: 3,
+            reserved: 0,
+            length: Default::default(),
+            transform_type: u8::from(TransformTypeValues::EncryptionAlgorithm),
+            reserved2: 0,
+            transform_id: U16::from(12),
+            attribute: AttributeV2 {
+                attribute_type: U16::from(AttributeType::KeyLength),
+                attribute_value: U16::from(128),
+            },
+        },
+        prf_transform: TransformV2 {
+            next_transform: 3,
+            reserved: 0,
+            length: Default::default(),
+            transform_type: u8::from(TransformTypeValues::PseudoRandomFunction),
+            reserved2: 0,
+            transform_id: U16::from(2),
+        },
+        integrity_alg: TransformV2 {
+            next_transform: 3,
+            reserved: 0,
+            length: Default::default(),
+            transform_type: u8::from(TransformTypeValues::IntegrityAlgorithm),
+            reserved2: 0,
+            transform_id: U16::from(2),
+        },
+        diffie_hellman_transform: TransformV2 {
+            next_transform: 0,
+            reserved: 0,
+            length: Default::default(),
+            transform_type: u8::from(TransformTypeValues::DiffieHellmanGroup),
+            reserved2: 0,
+            transform_id: U16::from(14),
+        },
+        key_exchange_payload: KeyExchangePayloadV2 {
+            next_payload: u8::from(PayloadTypeV2::Nonce),
+            reserved: 0,
+            length: Default::default(),
+            diffie_hellman_group: U16::from(14),
+            reserved2: Default::default(),
+        },
+        key_exchange_data: vec![],
+        nonce_payload: NoncePayloadV2 {
+            next_payload_: 0,
+            reserved: 0,
+            length: Default::default(),
+        },
+        nonce_data: vec![],
+    };
+    test.generate_key_exchange_data();
+    test.generate_nonce_data();
+    test.calculate_length_v2();
+    let bytes = test.convert_to_bytes_v2();
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
     let remote_addr = "192.168.33.10:500".parse::<SocketAddr>().unwrap();
     socket.connect(remote_addr).await?;
-    socket.send(&version).await.expect("Couldn't send packet");
+    socket.send(&bytes).await.expect("Couldn't send packet");
     let mut buf_v2 = [0u8; 50];
     socket
         .recv_from(&mut buf_v2)
@@ -233,4 +318,4 @@ pub async fn scan_v2() -> io::Result<()> {
         .expect("couldn't read buffer");
 
     Ok(())
-}*/
+}
