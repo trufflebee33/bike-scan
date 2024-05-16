@@ -43,10 +43,12 @@ use crate::ikev2::SecurityAssociationV2;
 use crate::ikev2::TransformAttributeV2;
 use crate::ikev2::TransformTypeValues;
 use crate::ikev2::TransformV2;
+use crate::parse_ike::NotifyPacketV1;
 use crate::parse_ike::ResponsePacket;
 use crate::parse_ikev2::NotifyPacket;
 use crate::parse_ikev2::ResponsePacketV2;
 
+pub mod default_ikev2_scan;
 pub mod ike;
 pub mod ikev2;
 pub mod parse_ike;
@@ -113,6 +115,14 @@ pub async fn scan() -> io::Result<()> {
         //parse Ike Response
         let ike_response = ResponsePacket::read_from_prefix(byte_slice).expect("Slice too short");
         ike_response.parse_response();
+        if ike_response.header.next_payload == 11 {
+            let notify_response =
+                NotifyPacketV1::parse_notify(byte_slice).expect("parsing not possible");
+            println!(
+                "Error: {:?}",
+                notify_response.notify_payload.notify_message_type
+            )
+        }
         let seconds = time::Duration::from_secs(90);
         tokio::time::sleep(seconds).await;
     }
@@ -123,7 +133,7 @@ pub async fn scan() -> io::Result<()> {
 /// Die Antwort des Servers wird verarbeitet und in der Konsole ausgegeben
 pub async fn scan_v2() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
-    let remote_addr = "192.168.122.68:500".parse::<SocketAddr>().unwrap();
+    let remote_addr = "ip:500".parse::<SocketAddr>().unwrap();
     socket.connect(remote_addr).await?;
     //sending IKE Version 2 Packet
     let transforms_v2 = IkeV2::build_transforms_v2();
@@ -212,10 +222,18 @@ pub async fn scan_v2() -> io::Result<()> {
                         if ike_v2_response.header.next_payload == 41 {
                             let notify_response =
                                 NotifyPacket::parse_notify(byte_slice_v2).unwrap();
-                            println!(
-                                "Notify Message: Error Code {:?}",
-                                notify_response.notify_payload.notify_message_type
-                            )
+                            if notify_response.notify_payload.notify_message_type.get() == 14 {
+                                println!(
+                                    "Notify Message: Error Code {:?}, no valid transforms",
+                                    notify_response.notify_payload.notify_message_type
+                                )
+                            } else if notify_response.notify_payload.notify_message_type.get() == 17
+                            {
+                                println!(
+                                    "Notify Message: Error Code {:?}, invalid key exchange data",
+                                    notify_response.notify_payload.notify_message_type
+                                )
+                            }
                         }
                     }
                 }
@@ -308,7 +326,7 @@ pub async fn test_version() -> io::Result<()> {
     test.calculate_length_v2();
     let bytes = test.convert_to_bytes_v2();
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
-    let remote_addr = "192.168.33.10:500".parse::<SocketAddr>().unwrap();
+    let remote_addr = "ip:500".parse::<SocketAddr>().unwrap();
     socket.connect(remote_addr).await?;
     socket.send(&bytes).await.expect("Couldn't send packet");
     let mut buf_v2 = [0u8; 50];
