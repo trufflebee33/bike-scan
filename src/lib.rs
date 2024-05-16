@@ -244,110 +244,15 @@ pub async fn scan_v2() -> io::Result<()> {
     Ok(())
 }
 
-/*pub async fn test_version() -> io::Result<()> {
-    let initiator_spi_v2: u64 = rand::thread_rng().gen();
-    let mut test = TestIkeVersion {
-        header: IkeV2Header {
-            initiator_spi: U64::from(initiator_spi_v2),
-            responder_spi: U64::from(0),
-            next_payload: u8::from(PayloadTypeV2::SecurityAssociation),
-            version: 32,
-            exchange_type: u8::from(ExchangeTypeV2::IkeSaInit),
-            flag: 8,
-            message_id: 0,
-            length: Default::default(),
-        },
-        sa_payload: SecurityAssociationV2 {
-            sa2_next_payload: u8::from(PayloadTypeV2::KeyExchange),
-            critical_bit: 0,
-            sa2_length: Default::default(),
-        },
-        proposal: Proposal {
-            next_proposal: 0,
-            reserved: 0,
-            length: Default::default(),
-            proposal_number: 1,
-            protocol_id: ProtocolId::IKE,
-            spi_size: 0,
-            number_of_transforms: 4,
-        },
-        encryption_transform: TransformAttributeV2 {
-            next_transform: 3,
-            reserved: 0,
-            length: Default::default(),
-            transform_type: u8::from(TransformTypeValues::EncryptionAlgorithm),
-            reserved2: 0,
-            transform_id: U16::from(12),
-            attribute: AttributeV2 {
-                attribute_type: U16::from(AttributeType::KeyLength),
-                attribute_value: U16::from(128),
-            },
-        },
-        prf_transform: TransformV2 {
-            next_transform: 3,
-            reserved: 0,
-            length: Default::default(),
-            transform_type: u8::from(TransformTypeValues::PseudoRandomFunction),
-            reserved2: 0,
-            transform_id: U16::from(2),
-        },
-        integrity_alg: TransformV2 {
-            next_transform: 3,
-            reserved: 0,
-            length: Default::default(),
-            transform_type: u8::from(TransformTypeValues::IntegrityAlgorithm),
-            reserved2: 0,
-            transform_id: U16::from(2),
-        },
-        diffie_hellman_transform: TransformV2 {
-            next_transform: 0,
-            reserved: 0,
-            length: Default::default(),
-            transform_type: u8::from(TransformTypeValues::DiffieHellmanGroup),
-            reserved2: 0,
-            transform_id: U16::from(14),
-        },
-        key_exchange_payload: KeyExchangePayloadV2 {
-            next_payload: u8::from(PayloadTypeV2::Nonce),
-            reserved: 0,
-            length: Default::default(),
-            diffie_hellman_group: U16::from(14),
-            reserved2: Default::default(),
-        },
-        key_exchange_data: vec![],
-        nonce_payload: NoncePayloadV2 {
-            next_payload_: 0,
-            reserved: 0,
-            length: Default::default(),
-        },
-        nonce_data: vec![],
-    };
-    test.generate_key_exchange_data();
-    test.generate_nonce_data();
-    test.calculate_length_v2();
-    let bytes = test.convert_to_bytes_v2();
-    let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
-    let remote_addr = "ip:500".parse::<SocketAddr>().unwrap();
-    socket.connect(remote_addr).await?;
-    socket.send(&bytes).await.expect("Couldn't send packet");
-    let mut buf_v2 = [0u8; 50];
-    socket
-        .recv_from(&mut buf_v2)
-        .await
-        .expect("couldn't read buffer");
-
-    Ok(())
-}*/
-
 pub async fn default_ike_v2_scan() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
     let remote_addr = "192.168.33.10:500".parse::<SocketAddr>().unwrap();
     socket.connect(remote_addr).await?;
     let transforms_v2 = DefaultIkeV2::build_transforms_v2();
-    for encryption_chunk in transforms_v2.0.chunks(63) {
-        for prf_chunk in transforms_v2.1.chunks(63) {
-            for integrity_algorithm_chunk in transforms_v2.2.chunks(63) {
-                for diffie_group_chunk in transforms_v2.3.chunks(63) {
+    for encryption_chunk in transforms_v2.0.chunks(1) {
+        for prf_chunk in transforms_v2.1.chunks(1) {
+            for integrity_algorithm_chunk in transforms_v2.2.chunks(1) {
+                for diffie_group_chunk in transforms_v2.3.chunks(1) {
                     for key_exchange_diffie_group in (1u16..=2).chain(5..=5).chain(14..=18) {
                         let initiator_spi_v2: u64 = rand::thread_rng().gen();
                         let mut default_ike_v2 = IkeV2 {
