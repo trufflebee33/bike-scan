@@ -21,6 +21,7 @@ use zerocopy::network_endian::U64;
 use zerocopy::AsBytes;
 use zerocopy::FromBytes;
 
+use crate::default_ikev2_scan::DefaultIkeV2;
 use crate::ike::ExchangeType;
 use crate::ike::IkeV1;
 use crate::ike::IkeV1Header;
@@ -243,7 +244,7 @@ pub async fn scan_v2() -> io::Result<()> {
     Ok(())
 }
 
-pub async fn test_version() -> io::Result<()> {
+/*pub async fn test_version() -> io::Result<()> {
     let initiator_spi_v2: u64 = rand::thread_rng().gen();
     let mut test = TestIkeVersion {
         header: IkeV2Header {
@@ -334,6 +335,118 @@ pub async fn test_version() -> io::Result<()> {
         .recv_from(&mut buf_v2)
         .await
         .expect("couldn't read buffer");
+
+    Ok(())
+}*/
+
+pub async fn default_ike_v2_scan() -> io::Result<()> {
+    let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
+    let remote_addr = "192.168.33.10:500".parse::<SocketAddr>().unwrap();
+    socket.connect(remote_addr).await?;
+    let transforms_v2 = DefaultIkeV2::build_transforms_v2();
+    for encryption_chunk in transforms_v2.0.chunks(63) {
+        for prf_chunk in transforms_v2.1.chunks(63) {
+            for integrity_algorithm_chunk in transforms_v2.2.chunks(63) {
+                for diffie_group_chunk in transforms_v2.3.chunks(63) {
+                    for key_exchange_diffie_group in (1u16..=2).chain(5..=5).chain(14..=18) {
+                        let initiator_spi_v2: u64 = rand::thread_rng().gen();
+                        let mut default_ike_v2 = IkeV2 {
+                            header: IkeV2Header {
+                                initiator_spi: U64::from(initiator_spi_v2),
+                                responder_spi: U64::from(0),
+                                next_payload: u8::from(PayloadTypeV2::SecurityAssociation),
+                                version: 32,
+                                exchange_type: u8::from(ExchangeTypeV2::IkeSaInit),
+                                flag: 8,
+                                message_id: 0,
+                                length: Default::default(),
+                            },
+                            sa_payload_v2: SecurityAssociationV2 {
+                                sa2_next_payload: u8::from(PayloadTypeV2::KeyExchange),
+                                critical_bit: 0,
+                                sa2_length: Default::default(),
+                            },
+                            proposal_v2: Proposal {
+                                next_proposal: 0,
+                                reserved: 0,
+                                length: Default::default(),
+                                proposal_number: 1,
+                                protocol_id: ProtocolId::IKE,
+                                spi_size: 0,
+                                number_of_transforms: Default::default(),
+                            },
+                            encryption_transforms: vec![],
+                            prf_transform: vec![],
+                            integrity_algorithm_transform: vec![],
+                            diffie_transform: vec![],
+                            key_exchange: KeyExchangePayloadV2 {
+                                next_payload: u8::from(PayloadTypeV2::Nonce),
+                                reserved: 0,
+                                length: Default::default(),
+                                diffie_hellman_group: U16::from(key_exchange_diffie_group),
+                                reserved2: Default::default(),
+                            },
+                            key_exchange_data: vec![],
+                            nonce_payload: NoncePayloadV2 {
+                                next_payload_: 0,
+                                reserved: 0,
+                                length: Default::default(),
+                            },
+                            nonce_data: vec![],
+                        };
+                        default_ike_v2.set_transforms_v2(
+                            encryption_chunk,
+                            prf_chunk,
+                            integrity_algorithm_chunk,
+                            diffie_group_chunk,
+                        );
+                        default_ike_v2.generate_key_exchange_data();
+                        default_ike_v2.generate_nonce_data();
+                        default_ike_v2.calculate_length_v2();
+
+                        let bytes_v2 = default_ike_v2.convert_to_bytes_v2();
+                        socket.send(&bytes_v2).await.expect("Couldn't send packet");
+
+                        let mut buf_v2 = [0u8; 285];
+                        socket
+                            .recv_from(&mut buf_v2)
+                            .await
+                            .expect("couldn't read buffer");
+                        let byte_slice_v2 = buf_v2.as_slice();
+                        let ike_v2_response =
+                            ResponsePacketV2::parse_ike_v2(byte_slice_v2).unwrap();
+                        //println!("{:?}", ike_v2_response);
+
+                        println!(
+                            "Ike Version is {:?}, ExchangeType is {:?}",
+                            ike_v2_response.header.version, ike_v2_response.header.exchange_type
+                        );
+
+                        println!("Found Transforms: Encryption Algorthm: {:?}, Prf-Funktion: {:?}, Integrity Algorithm: {:?}, Diffie-Hellamn-Gruppe: {:?}"
+                                 ,ike_v2_response.encryption_transform.transform_id, ike_v2_response.prf_transform.transform_id, ike_v2_response.integrity_algorithm_transform.transform_id,
+                                 ike_v2_response.diffie_transform.transform_id);
+
+                        if ike_v2_response.header.next_payload == 41 {
+                            let notify_response =
+                                NotifyPacket::parse_notify(byte_slice_v2).unwrap();
+                            if notify_response.notify_payload.notify_message_type.get() == 14 {
+                                println!(
+                                    "Notify Message: Error Code {:?}, no valid transforms",
+                                    notify_response.notify_payload.notify_message_type
+                                )
+                            } else if notify_response.notify_payload.notify_message_type.get() == 17
+                            {
+                                println!(
+                                    "Notify Message: Error Code {:?}, invalid key exchange data",
+                                    notify_response.notify_payload.notify_message_type
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     Ok(())
 }
