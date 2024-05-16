@@ -94,12 +94,23 @@ impl ResponsePacket {
         }
 
         //Print Transforms
-        if notify_message == U16::from(14) {
+        /*if notify_message == U16::from(14) {
             println!("No valid Transform found, Error {:?}", notify_message)
-        }
+        }*/
     }
 }
+#[derive(Debug, Clone, Copy, FromBytes, FromZeroes)]
+#[repr(packed)]
+pub struct NotifyPacketV1 {
+    pub header: ResponseHeader,
+    pub notify_payload: RespondNotify,
+}
 
+impl NotifyPacketV1 {
+    pub fn parse_notify(buf: &[u8]) -> Option<Self> {
+        Self::read_from_prefix(buf)
+    }
+}
 ///Response Wrapper Struct für eine Fehlermeldung
 #[derive(Debug, Clone, Copy, FromBytes, FromZeroes)]
 #[repr(packed)]
@@ -254,7 +265,7 @@ pub struct RespondNotify {
     ///Payload Länge
     pub length: U16,
     ///Domain of Interpretation
-    pub doi: U64,
+    pub doi: U32,
     ///Protokoll ID, Wert 1 für Ike
     pub protocol_id: u8,
     ///Größe des Security Parameter Indexes
