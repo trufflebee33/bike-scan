@@ -55,6 +55,13 @@ pub mod ikev2;
 pub mod parse_ike;
 pub mod parse_ikev2;
 
+/*pub async fn full_scan() -> io::Result<()> {
+    let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
+    let remote_addr = "ip:500".parse::<SocketAddr>().unwrap();
+    socket.connect(remote_addr).await?;
+
+    Ok(())
+}*/
 ///Diese Funktion generiert das IkeV1 Paket und sendet diese an der Zielserver.
 /// Wenn keine Transformationen gefunden werden,
 /// wird das IkeV2 Paket mit der Funktion scan_v2 an den Server gesendet.
@@ -124,7 +131,7 @@ pub async fn scan() -> io::Result<()> {
                 notify_response.notify_payload.notify_message_type
             )
         }
-        let seconds = time::Duration::from_secs(90);
+        let seconds = time::Duration::from_secs(60);
         tokio::time::sleep(seconds).await;
     }
     Ok(())
@@ -209,20 +216,21 @@ pub async fn scan_v2() -> io::Result<()> {
                         let byte_slice_v2 = buf_v2.as_slice();
                         let ike_v2_response =
                             ResponsePacketV2::parse_ike_v2(byte_slice_v2).unwrap();
-                        //println!("{:?}", ike_v2_response);
+                        println!("{:?}", ike_v2_response);
 
                         println!(
                             "Ike Version is {:?}, ExchangeType is {:?}",
                             ike_v2_response.header.version, ike_v2_response.header.exchange_type
                         );
 
-                        println!("Found Transforms: Encryption Algorthm: {:?}, Prf-Funktion: {:?}, Integrity Algorithm: {:?}, Diffie-Hellamn-Gruppe: {:?}"
-                             ,ike_v2_response.encryption_transform.transform_id, ike_v2_response.prf_transform.transform_id, ike_v2_response.integrity_algorithm_transform.transform_id,
-                             ike_v2_response.diffie_transform.transform_id);
+                        /*println!("Found Transforms: Encryption Algorthm: {:?}, Prf-Funktion: {:?}, Integrity Algorithm: {:?}, Diffie-Hellamn-Gruppe: {:?}"
+                        ,ike_v2_response.encryption_transform.transform_id, ike_v2_response.prf_transform.transform_id, ike_v2_response.integrity_algorithm_transform.transform_id,
+                        ike_v2_response.diffie_transform.transform_id);*/
 
                         if ike_v2_response.header.next_payload == 41 {
                             let notify_response =
                                 NotifyPacket::parse_notify(byte_slice_v2).unwrap();
+                            println!("Notify Payload: {:?}", notify_response);
                             if notify_response.notify_payload.notify_message_type.get() == 14 {
                                 println!(
                                     "Notify Message: Error Code {:?}, no valid transforms",
@@ -232,6 +240,11 @@ pub async fn scan_v2() -> io::Result<()> {
                             {
                                 println!(
                                     "Notify Message: Error Code {:?}, invalid key exchange data",
+                                    notify_response.notify_payload.notify_message_type
+                                )
+                            } else {
+                                println!(
+                                    "Fehlercode: {:?}",
                                     notify_response.notify_payload.notify_message_type
                                 )
                             }
@@ -246,7 +259,7 @@ pub async fn scan_v2() -> io::Result<()> {
 
 pub async fn default_ike_v2_scan() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0".parse::<SocketAddr>().unwrap()).await?;
-    let remote_addr = "192.168.33.10:500".parse::<SocketAddr>().unwrap();
+    let remote_addr = "ip:500".parse::<SocketAddr>().unwrap();
     socket.connect(remote_addr).await?;
     let transforms_v2 = DefaultIkeV2::build_transforms_v2();
     for encryption_chunk in transforms_v2.0.chunks(1) {
@@ -327,7 +340,7 @@ pub async fn default_ike_v2_scan() -> io::Result<()> {
                             ike_v2_response.header.version, ike_v2_response.header.exchange_type
                         );
 
-                        println!("Found Transforms: Encryption Algorthm: {:?}, Prf-Funktion: {:?}, Integrity Algorithm: {:?}, Diffie-Hellamn-Gruppe: {:?}"
+                        println!("Found Transforms: Encryption Algorithm: {:?}, Prf-Funktion: {:?}, Integrity Algorithm: {:?}, Diffie-Hellamn-Gruppe: {:?}"
                                  ,ike_v2_response.encryption_transform.transform_id, ike_v2_response.prf_transform.transform_id, ike_v2_response.integrity_algorithm_transform.transform_id,
                                  ike_v2_response.diffie_transform.transform_id);
 
@@ -347,6 +360,8 @@ pub async fn default_ike_v2_scan() -> io::Result<()> {
                                 )
                             }
                         }
+                        let seconds = time::Duration::from_secs(30);
+                        tokio::time::sleep(seconds).await;
                     }
                 }
             }
